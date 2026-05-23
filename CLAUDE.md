@@ -156,8 +156,9 @@ Character-level LM on TinyStories (10M train chars, 500K valid, vocab=94, seq_le
 
 | Config | Params | val_ppl | tok/s |
 |--------|--------|---------|-------|
-| d128 bare RetNet | 1.67M | 2.99 | 19.9K |
-| **d256 bare RetNet** | **6.6M** | **2.50** | 5.8K |
+| d128 bare RetNet (512) | 1.67M | 2.99 | 19.9K |
+| d128 bare RetNet (1024) | 1.67M | 3.14 | 4.9K |
+| **d256 bare RetNet (512)** | **6.6M** | **2.50** | 5.8K |
 | d128 full (Engram + milestones + TCB) | 8.08M | 3.14 | 15.8K |
 | Engram-only (no milestones/TCB) | 8.02M | 4.41@1K | 20.4K |
 
