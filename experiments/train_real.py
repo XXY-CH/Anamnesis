@@ -186,6 +186,10 @@ def build_model(args: argparse.Namespace, vocab_size: int) -> RetNetEngramModel:
         milestone_token_ids=(),
         branch_init_scale=args.branch_init_scale,
         attnres_every=args.attnres_every,
+        engram_layers=(args.engram_layer,) if args.use_engram else (),
+        engram_num_slots=args.engram_slots,
+        engram_max_ngram=args.engram_max_ngram,
+        engram_hash_heads=args.engram_hash_heads,
     )
     return RetNetEngramModel(config)
 
@@ -369,6 +373,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--use-token-copy-buffer", action="store_true")
     p.add_argument("--attnres-every", type=int, default=4)
     p.add_argument("--branch-init-scale", type=float, default=1e-4)
+    p.add_argument("--use-engram", action="store_true")
+    p.add_argument("--engram-layer", type=int, default=2)
+    p.add_argument("--engram-slots", type=int, default=4096)
+    p.add_argument("--engram-max-ngram", type=int, default=3)
+    p.add_argument("--engram-hash-heads", type=int, default=4)
 
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--steps", type=int, default=5000)
