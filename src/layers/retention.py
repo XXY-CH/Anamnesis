@@ -120,9 +120,11 @@ class RetentionLayer(nn.Module):
             prefix = torch.cumsum(log_gate, dim=1)  # [b, s, h]
             prefix_i = prefix.unsqueeze(2)
             prefix_j = prefix.unsqueeze(1)
-            log_decay = prefix_i - prefix_j
-            decay_mask = torch.exp(log_decay).permute(0, 3, 1, 2)
-            decay_mask = decay_mask * causal_mask.view(1, 1, seq_len, seq_len)
+            log_decay = (prefix_i - prefix_j).permute(0, 3, 1, 2)
+            log_decay = log_decay.masked_fill(
+                causal_mask.view(1, 1, seq_len, seq_len) < 0.5, float("-inf")
+            )
+            decay_mask = torch.exp(log_decay)
 
         # Retention: (Q K^T * D) V
         attn = torch.einsum("bhsd,bhtd->bhst", q, k) * decay_mask
@@ -243,9 +245,11 @@ class RetentionLayer(nn.Module):
             gate = retention_gate.to(device=x.device, dtype=x.dtype)
             log_gate = torch.log(gate.clamp_min(torch.finfo(x.dtype).tiny))
             prefix = torch.cumsum(log_gate, dim=1)
-            decay_mask = torch.exp(prefix.unsqueeze(2) - prefix.unsqueeze(1))
-            decay_mask = decay_mask.permute(0, 3, 1, 2)
-            decay_mask = decay_mask * causal_mask.view(1, 1, chunk_len, chunk_len)
+            log_decay = (prefix.unsqueeze(2) - prefix.unsqueeze(1)).permute(0, 3, 1, 2)
+            log_decay = log_decay.masked_fill(
+                causal_mask.view(1, 1, chunk_len, chunk_len) < 0.5, float("-inf")
+            )
+            decay_mask = torch.exp(log_decay)
 
         within_chunk = torch.einsum("bhsd,bhtd->bhst", q, k) * decay_mask
         within_chunk = self.dropout(within_chunk)
