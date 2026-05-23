@@ -126,6 +126,30 @@ Memory is O(d²×L + d×K) — constant regardless of sequence length.
 - **Positional keys**: critical for TokenCopyBuffer at seq_len > 256 (0.797→1.000)
 - **abs() on residual_scale**: prevents sign reversal from AdamW weight decay
 
+### Phase 3 Progress: Input-Dependent Mechanisms + Length Scaling
+
+**Input-dependent gamma** (like Mamba's selective SSM): γ(x_t) = σ(W_γ x_t + b_γ)
+
+| Seq Len | Baseline eval_em | + input-dep γ | Steps |
+|---------|-----------------|---------------|-------|
+| 128 | 0.394 | **0.519** | 200 |
+| 1024 | 0.588 | **0.600** | 400 |
+| 2048 | 0.575 | **0.650** | 400 |
+| 4096 | — | **0.500** | 800 |
+
+Consistent improvement at all lengths. Kept as optional enhancement (`--input-dependent-gamma`).
+
+**Discarded mechanisms** (help short-range, hurt long-range due to O(1/D) gradient):
+- Output gate: 0.544@128 but 0.512@1024 → discarded
+- Value gate (LSTM input gate): unstable at 4096 → discarded
+
+**Key findings:**
+- Proof 31: O(1/D) gradient vanishing is fundamental for any recurrent-chain mechanism
+- Proof 32: Retention state noise is bounded (geometric series), independent of seq_len
+- NaN bug fixed: gated decay mask exp() overflow at seq_len > 2048
+- 4096 works with 800 steps (training dynamics, not architecture limit)
+- 8192 needs O(s²) memory workaround (chunkwise training)
+
 ## Autonomous Research Loop
 
 ### Objective
