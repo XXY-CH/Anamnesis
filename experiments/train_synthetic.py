@@ -335,6 +335,7 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         snapshot_logit_scale=args.snapshot_logit_scale,
         use_token_copy_buffer=uses_full_arch and getattr(args, "use_token_copy_buffer", False),
         position_encoding_type=getattr(args, "position_encoding", "learned"),
+        token_copy_sinusoidal_pos=getattr(args, "position_encoding", "learned") == "sinusoidal",
         input_dependent_gamma=bool(getattr(args, "input_dependent_gamma", False)),
         retention_output_gate=bool(getattr(args, "retention_output_gate", False)),
     )
