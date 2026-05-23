@@ -364,7 +364,6 @@ class RetNetEngramModel(nn.Module):
             return logits, metrics, diagnostics
         return logits
 
-    @torch.no_grad()
     def forward_chunked(
         self,
         input_ids: torch.Tensor,
@@ -458,7 +457,7 @@ class RetNetEngramModel(nn.Module):
                 if collected is not None:
                     snapshot_cache = collected
 
-            depth_sources.append(x_full.detach())
+            depth_sources.append(x_full.detach() if not self.training else x_full)
             layer_input = x_full
 
         x = x_full

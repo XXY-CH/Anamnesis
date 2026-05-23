@@ -538,7 +538,21 @@ def run_variant(
     for step in range(1, args.steps + 1):
         batch = make_batch(args, device, split="train")
         optimizer.zero_grad(set_to_none=True)
-        logits, metrics = model(batch.input_ids, return_metrics=True)
+        if getattr(args, "gradient_checkpointing", False) and isinstance(model, RetNetEngramModel):
+            logits = model.forward_chunked(
+                batch.input_ids,
+                chunk_size=getattr(args, "chunk_size", 512),
+            )
+            metrics: dict[str, torch.Tensor | None] = {}
+        elif getattr(args, "gradient_checkpointing", False):
+            from torch.utils.checkpoint import checkpoint as cp
+            logits, metrics = cp(
+                lambda ids: model(ids, return_metrics=True),
+                batch.input_ids,
+                use_reentrant=False,
+            )
+        else:
+            logits, metrics = model(batch.input_ids, return_metrics=True)
         loss = masked_lm_loss(logits, batch.target_ids, batch.loss_mask)
         loss.backward()
         clip_gradients(args, model, optimizer)
@@ -695,6 +709,10 @@ def parse_args() -> argparse.Namespace:
                         help="Make retention decay gamma input-dependent (like Mamba).")
     parser.add_argument("--retention-output-gate", action="store_true",
                         help="Add input-dependent output gate to retention (like Mamba).")
+    parser.add_argument("--gradient-checkpointing", action="store_true",
+                        help="Use gradient checkpointing to reduce memory at long sequences.")
+    parser.add_argument("--chunk-size", type=int, default=512,
+                        help="Chunk size for chunked retention training (used with --gradient-checkpointing).")
     parser.add_argument("--needle-password-len", type=int, default=3)
     parser.add_argument("--alien-num-pairs", type=int, default=4)
     parser.add_argument("--alien-static-key-count", type=int, default=32)
