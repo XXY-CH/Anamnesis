@@ -150,6 +150,26 @@ Consistent improvement at all lengths. Kept as optional enhancement (`--input-de
 - 4096 works with 800 steps (training dynamics, not architecture limit)
 - 8192 needs O(s²) memory workaround (chunkwise training)
 
+### Phase 3.5: Real-Data Validation (TinyStories)
+
+Character-level LM on TinyStories (10M train chars, 500K valid, vocab=94, seq_len=512, 5000 steps):
+
+| Config | Params | val_ppl | tok/s |
+|--------|--------|---------|-------|
+| **Bare RetNet** (sin PE + input-dep γ) | **1.67M** | **2.99** | 19.9K |
+| Full (Engram + milestones + TCB) | 8.08M | 3.14 | 15.8K |
+| Engram-only (no milestones/TCB) | 8.02M | 4.41@1K | 20.4K |
+
+**Key finding: Bare RetNet wins on all metrics.** Engram adds 6.3M hash table params that hurt
+performance on standard LM. The memory mechanisms (Engram, TCB, milestones) are designed for exact
+recall, not statistical next-token prediction. This validates the pipeline design: the Small Reasoner
+should be a clean RetNet, and the Memory Compiler should be a separate, task-activated module.
+
+**Mathematical basis:** For LM, every position contributes to loss equally. The RetNet state already
+captures sequential dependencies. Adding Engram's gated residual introduces capacity waste — the model
+must learn to suppress it. For recall tasks, the needle's information must survive decay → TCB bypasses
+decay chain → exact recall. Different tasks need different mechanisms.
+
 ## Autonomous Research Loop
 
 ### Objective
