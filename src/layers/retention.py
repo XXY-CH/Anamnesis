@@ -23,12 +23,14 @@ class RetentionLayer(nn.Module):
         n_heads: int,
         chunk_size: int = 256,
         dropout: float = 0.0,
+        input_dependent_gamma: bool = False,
     ) -> None:
         super().__init__()
         self.d_model = d_model
         self.n_heads = n_heads
         self.head_dim = d_model // n_heads
         self.chunk_size = chunk_size
+        self.input_dependent_gamma = input_dependent_gamma
 
         self.q_proj = nn.Linear(d_model, d_model, bias=False)
         self.k_proj = nn.Linear(d_model, d_model, bias=False)
@@ -37,6 +39,14 @@ class RetentionLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self._init_decay()
+
+        if input_dependent_gamma:
+            self.gamma_proj = nn.Linear(d_model, n_heads, bias=True)
+            with torch.no_grad():
+                nn.init.zeros_(self.gamma_proj.weight)
+                self.gamma_proj.bias.copy_(
+                    (self.gamma / (1 - self.gamma)).log()
+                )
 
     def _init_decay(self) -> None:
         """Initialize fixed RetNet-style per-head decay rates below one."""
@@ -52,6 +62,21 @@ class RetentionLayer(nn.Module):
             )
         self.register_buffer("gamma", gamma)
 
+    def _compute_dynamic_gamma(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.sigmoid(self.gamma_proj(x))
+
+    def _resolve_gate(
+        self,
+        x: torch.Tensor,
+        retention_gate: torch.Tensor | None,
+    ) -> torch.Tensor | None:
+        if not self.input_dependent_gamma:
+            return retention_gate
+        dynamic = self._compute_dynamic_gamma(x)
+        if retention_gate is not None:
+            return torch.maximum(retention_gate, dynamic)
+        return dynamic
+
     def parallel_retention(
         self,
         x: torch.Tensor,
@@ -66,6 +91,8 @@ class RetentionLayer(nn.Module):
             Retained output [batch, seq_len, d_model]
         """
         batch, seq_len, _ = x.shape
+
+        retention_gate = self._resolve_gate(x, retention_gate)
 
         q = self._split_heads(self.q_proj(x))
         k = self._split_heads(self.k_proj(x))
@@ -121,6 +148,10 @@ class RetentionLayer(nn.Module):
             Output tensor and updated state
         """
         batch = x.shape[0]
+
+        retention_gate = self._resolve_gate(x, retention_gate)
+        if retention_gate is not None and retention_gate.dim() == 3:
+            retention_gate = retention_gate.squeeze(1)
 
         q = self._split_heads(self.q_proj(x))
         k = self._split_heads(self.k_proj(x))
@@ -188,6 +219,8 @@ class RetentionLayer(nn.Module):
             (output [batch, chunk_len, d_model], updated_state)
         """
         batch, chunk_len, _ = x.shape
+
+        retention_gate = self._resolve_gate(x, retention_gate)
 
         q = self._split_heads(self.q_proj(x))
         k = self._split_heads(self.k_proj(x))

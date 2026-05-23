@@ -335,6 +335,8 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         snapshot_logit_scale=args.snapshot_logit_scale,
         use_token_copy_buffer=uses_full_arch and getattr(args, "use_token_copy_buffer", False),
         position_encoding_type=getattr(args, "position_encoding", "learned"),
+        input_dependent_gamma=bool(getattr(args, "input_dependent_gamma", False)),
+        retention_output_gate=bool(getattr(args, "retention_output_gate", False)),
     )
     model = RetNetEngramModel(config)
     override_retention_gamma(model, args.retention_gamma)
@@ -689,6 +691,10 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override all RetNet base decay rates for stress tests.",
     )
+    parser.add_argument("--input-dependent-gamma", action="store_true",
+                        help="Make retention decay gamma input-dependent (like Mamba).")
+    parser.add_argument("--retention-output-gate", action="store_true",
+                        help="Add input-dependent output gate to retention (like Mamba).")
     parser.add_argument("--needle-password-len", type=int, default=3)
     parser.add_argument("--alien-num-pairs", type=int, default=4)
     parser.add_argument("--alien-static-key-count", type=int, default=32)

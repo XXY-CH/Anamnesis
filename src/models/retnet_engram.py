@@ -53,6 +53,8 @@ class RetNetEngramConfig:
     token_copy_use_pos_keys: bool = True
     token_copy_sinusoidal_pos: bool = False
     position_encoding_type: str = "learned"  # "learned" or "sinusoidal"
+    input_dependent_gamma: bool = False
+    retention_output_gate: bool = False
 
 
 def sinusoidal_encoding(
@@ -96,6 +98,7 @@ class DenseRetNetEngramLayer(nn.Module):
             d_model=config.d_model,
             n_heads=config.n_heads,
             dropout=config.dropout,
+            input_dependent_gamma=config.input_dependent_gamma,
         )
 
         self.ffn_norm = nn.RMSNorm(config.d_model)
@@ -131,6 +134,14 @@ class DenseRetNetEngramLayer(nn.Module):
             if use_attnres
             else None
         )
+        self.retention_output_gate = (
+            nn.Linear(config.d_model, config.d_model, bias=True)
+            if config.retention_output_gate
+            else None
+        )
+        if self.retention_output_gate is not None:
+            nn.init.zeros_(self.retention_output_gate.weight)
+            nn.init.constant_(self.retention_output_gate.bias, 2.0)
 
     def forward(
         self,
@@ -149,6 +160,11 @@ class DenseRetNetEngramLayer(nn.Module):
         retention_out = self.retention(u, retention_gate=retention_gate)
         if not isinstance(retention_out, torch.Tensor):
             retention_out = retention_out[0]
+
+        if self.retention_output_gate is not None:
+            retention_out = retention_out * torch.sigmoid(
+                self.retention_output_gate(u)
+            )
 
         ffn_out = self.ffn(self.ffn_norm(x))
         x = x + retention_out + ffn_out
@@ -413,6 +429,11 @@ class RetNetEngramModel(nn.Module):
                 )
                 ret_states[layer_idx] = new_state
 
+                if layer.retention_output_gate is not None:
+                    ret_out = ret_out * torch.sigmoid(
+                        layer.retention_output_gate(u)
+                    )
+
                 ffn_out = layer.ffn(layer.ffn_norm(x))
                 x = x + ret_out + ffn_out
 
@@ -531,6 +552,11 @@ class RetNetEngramModel(nn.Module):
                 retention_gate=retention_gate,
             )
             new_ret_states.append(new_ret)
+
+            if layer.retention_output_gate is not None:
+                ret_out = ret_out * torch.sigmoid(
+                    layer.retention_output_gate(u)
+                )
 
             ffn_out = layer.ffn(layer.ffn_norm(x))
             x = x + ret_out + ffn_out
