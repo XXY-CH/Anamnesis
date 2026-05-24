@@ -417,6 +417,26 @@ embeddings distinctive. Transformer's attention produces similar representations
 random-fill chunks — nothing in the hidden state signals "this chunk contains the needle."
 This validates RetNet as the correct backbone for the Context Compiler pipeline.
 
+**1M evaluation with 16 eval batches** (442K params, 12K retriever, seed=42):
+
+| Length | Chunks | Best EM | Best Temp |
+|--------|--------|---------|-----------|
+| 2K | 4 | 1.000 | 0.1 |
+| 4K | 8 | 0.938 | 0.5 |
+| 8K | 16 | 0.938 | 0.1 |
+| 16K | 32 | 0.875 | 0.5 |
+| 32K | 64 | 0.812 | 0.1 |
+| 65K | 128 | 0.875 | 0.2 |
+| 131K | 256 | 0.750 | 0.1 |
+| 262K | 512 | 0.750 | 1.0 |
+| 524K | 1024 | 0.875 | 0.5 |
+| **1M** | **2048** | **0.625** | **0.5** |
+
+Previous 8-batch 1M=0.750 was noise — 16 batches shows 0.625 is the true level.
+Bottleneck: 64-dim embeddings from 442K model can't distinguish 2048 random chunks.
+The 3.6M model (with Engram tables) achieves EM=1.000 at 131K where 442K gets 0.750 —
+larger models produce more discriminative chunk embeddings.
+
 ## Autonomous Research Loop
 
 ### Objective
