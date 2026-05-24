@@ -437,6 +437,17 @@ Bottleneck: 64-dim embeddings from 442K model can't distinguish 2048 random chun
 The 3.6M model (with Engram tables) achieves EM=1.000 at 131K where 442K gets 0.750 —
 larger models produce more discriminative chunk embeddings.
 
+**proj_dim=256 at 1M** (442K model, 12K→37K retriever, 8 eval batches):
+
+| Config | @131K | @262K | @524K | @1M |
+|--------|-------|-------|-------|-----|
+| proj_dim=64, 8 batches | 1.000 | 0.812 | 0.875 | 0.750 |
+| proj_dim=64, 16 batches | 0.750 | 0.750 | 0.875 | 0.625 |
+| **proj_dim=256, 8 batches** | 0.750 | 0.750 | 0.875 | **0.875** |
+
+Higher-dim projection gives retriever more capacity for 2048-way discrimination.
+1M improves from 0.750→0.875. Still noisy (8 batches). Retriever params: 12K→37K.
+
 ## Autonomous Research Loop
 
 ### Objective
