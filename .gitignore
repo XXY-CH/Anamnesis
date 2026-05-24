@@ -29,6 +29,7 @@ CLAUDE.md
 # Generated experiment artifacts
 experiments/results/
 experiments/logs/
+experiments/data/
 analysis/figures/
 analysis/figures_v2/
 *.pt
