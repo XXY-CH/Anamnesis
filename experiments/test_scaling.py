@@ -170,9 +170,15 @@ def train_retriever_curriculum(
 @torch.no_grad()
 def evaluate_pipeline(
     model, retriever, device, seq_len, chunk_size=512, eval_batches=8,
-    selection_temperature=1.0, pool_method="mean",
+    selection_temperature=1.0, pool_method="mean", group_size=0,
 ):
-    """Evaluate pipeline: contrastive chunk selection + token embedding readout."""
+    """Evaluate pipeline: contrastive chunk selection + token embedding readout.
+
+    If group_size > 0, uses hierarchical retrieval:
+    1. Group chunks into super-chunks of `group_size` chunks each
+    2. Score super-chunks (mean of constituent chunk embeddings)
+    3. Score chunks within selected super-chunk
+    """
     model.eval()
     retriever.eval()
     vocab_size = model.config.vocab_size
@@ -207,11 +213,41 @@ def evaluate_pipeline(
         local_qp = qp - query_chunk_start
         query_emb = query_hidden[:, local_qp : local_qp + 1, :].mean(dim=1)
 
-        # Chunk selection with temperature scaling
-        scores = retriever.score_chunks(query_emb, chunk_embs, query_chunk_idx=query_chunk_idx)
-        scaled_scores = scores / selection_temperature
-        weights = torch.softmax(scaled_scores, dim=-1)
-        selected_idx = weights[0].argmax().item()
+        # Chunk selection
+        num_chunks = chunk_embs.shape[1]
+        if group_size > 0 and num_chunks > group_size:
+            # Hierarchical: first select super-chunk, then chunk within it
+            n_groups = (num_chunks + group_size - 1) // group_size
+            # Pad chunk_embs to evenly divisible
+            pad_len = n_groups * group_size - num_chunks
+            if pad_len > 0:
+                chunk_embs = torch.cat([
+                    chunk_embs,
+                    chunk_embs[:, -1:].expand(-1, pad_len, -1),
+                ], dim=1)
+            # Reshape into groups and mean-pool
+            grouped = chunk_embs.view(1, n_groups, group_size, -1)
+            super_embs = grouped.mean(dim=2)  # [1, n_groups, d]
+
+            # Level 1: score super-chunks
+            super_scores = retriever.score_chunks(query_emb, super_embs)
+            super_scaled = super_scores / selection_temperature
+            super_weights = torch.softmax(super_scaled, dim=-1)
+            selected_group = super_weights[0].argmax().item()
+
+            # Level 2: score chunks within selected group
+            group_embs = chunk_embs[:, selected_group * group_size : (selected_group + 1) * group_size]
+            local_scores = retriever.score_chunks(query_emb, group_embs)
+            local_scaled = local_scores / selection_temperature
+            local_weights = torch.softmax(local_scaled, dim=-1)
+            local_idx = local_weights[0].argmax().item()
+            selected_idx = selected_group * group_size + local_idx
+        else:
+            # Flat selection with temperature scaling
+            scores = retriever.score_chunks(query_emb, chunk_embs, query_chunk_idx=query_chunk_idx)
+            scaled_scores = scores / selection_temperature
+            weights = torch.softmax(scaled_scores, dim=-1)
+            selected_idx = weights[0].argmax().item()
         chunk_correct.append(1.0 if selected_idx == target_chunk else 0.0)
 
         # Token embedding readout from selected chunk
@@ -282,6 +318,8 @@ def main():
                         help="Projection dimension for chunk retriever (default: d_model).")
     parser.add_argument("--pool-method", choices=["mean", "max", "meanmax"], default="mean",
                         help="Chunk embedding pooling method.")
+    parser.add_argument("--group-size", type=int, default=0,
+                        help="Hierarchical retrieval group size (0=flat).")
     parser.add_argument("--device", default=None)
     args = parser.parse_args()
 
@@ -369,6 +407,7 @@ def main():
                 model, retriever, device, length,
                 chunk_size=args.chunk_size, eval_batches=args.eval_batches,
                 selection_temperature=temp, pool_method=pool_method,
+                group_size=args.group_size,
             )
             elapsed = time.time() - t0
             print(

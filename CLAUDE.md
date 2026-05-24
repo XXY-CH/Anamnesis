@@ -448,6 +448,13 @@ larger models produce more discriminative chunk embeddings.
 Higher-dim projection gives retriever more capacity for 2048-way discrimination.
 1M improves from 0.750→0.875. Still noisy (8 batches). Retriever params: 12K→37K.
 
+**Direction C: Hierarchical retrieval — DISCARDED.** Group chunks into super-chunks
+(group_size=32), score super-chunks then score within selected group. Result: much worse
+(1M drops from 0.875→0.500). Super-chunk mean-pooling dilutes the needle signal 32x
+(3 password tokens in 16K tokens). Retriever trained on individual chunk embeddings
+doesn't generalize to averaged super-chunk embeddings. Two-stage classification also
+introduces two points of failure.
+
 ## Autonomous Research Loop
 
 ### Objective
