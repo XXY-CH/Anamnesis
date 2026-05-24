@@ -91,11 +91,9 @@ For each mechanism, we follow this disciplined path:
 |-------|------|--------|
 | **Phase 1: Mechanism Validation** | Verify each component independently on synthetic tasks | **COMPLETE** |
 | **Phase 2: O(1) Recurrent Inference** | Constant-memory inference via recurrent mode | **COMPLETE** |
-| **Phase 3: Context Compiler (64K)** | Build capture/readout/margin pipeline for 64K context | **COMPLETE (1M achieved)** |
-| **Phase 3.10: Self-Supervised Gating** | Engram-triggered TCB via oracle-to-learned distillation | **COMPLETE (EM=1.0)** |
-| Phase 4: Multi-hop Memory (256K) | Document-level retrieval with cross-references | Planned |
-| Phase 5: Million-Context (1M) | Full memory compiler at 1M token scale | Planned |
-| Phase 6: Real Tasks | Transfer to real language modeling (TinyStories etc.) | Planned |
+| **Phase 3: Context Compiler (1M)** | Chunk retrieval pipeline to 1M tokens | **COMPLETE (EM=0.938@524K)** |
+| **Phase 4: Reliable 1M** | EM=1.0 at 1M via hierarchical retrieval or stronger retriever | **In Progress** |
+| Phase 5: Real Tasks | Transfer pipeline to real language modeling | Planned |
 
 ### Phase 1 Results (COMPLETE)
 
@@ -347,6 +345,50 @@ Engram gate to predict oracle positions. At inference: Engram surprise score dri
 
 **Architecture**: `use_engram_tcb_trigger=True` in config. Surprise = mean of Engram gate
 across layers and d_model dimensions. Distillation loss: weighted BCE with auto pos_weight.
+
+### Phase 3.11: Frontier Literature + Scaling Experiments
+
+**Literature review** (8 papers, see `docs/brainstorm-2026-05-24.md`):
+- SILA: memory-dependent gate, 20x length extrapolation
+- SR-TTT: surprisal-aware residual cache, two-stage curriculum
+- FDM: wave-particle separation, Freeze-Scan training (7.5x convergence)
+- Bicameral: orthogonal keys required for reliable memory → validates hash-based Engram
+- ReSuME: SAE reconstruction error as surprise → validates Engram gate
+- GSA: hierarchical gist tokens → could extend chunk retrieval
+- SPLA: second-order Taylor for block selection
+- SuRe: NLL as surprise for buffer selection
+
+**Direction A: Loss-Driven Surprise — DISCARDED**. Self-supervised entropy cannot
+replace oracle for TCB storage. On needle task, entropy is high everywhere (random
+filler tokens), so top-K by entropy selects random positions. Per-token CE loss has
+same problem. Fundamental: no self-supervised signal distinguishes password from
+filler when most tokens are random. The oracle/structural marker is necessary.
+
+**Curriculum retriever training** (d_model=64, 16 eval batches, 4→16→64→256 chunks):
+
+| Eval Length | Chunks | Best EM | Best Temp |
+|-------------|--------|---------|-----------|
+| 2K | 4 | 1.000 | 0.1 |
+| 4K | 8 | 0.938 | 0.5 |
+| 8K | 16 | 0.875 | 0.1 |
+| 16K | 32 | 0.875 | 0.5 |
+| 32K | 64 | 0.750 | 1.0 |
+| 65K | 128 | 0.875 | 0.2 |
+| 131K | 256 | 0.750 | 0.2 |
+| 262K | 512 | 0.812 | 1.0 |
+| **524K** | **1024** | **0.938** | **0.5** |
+| 1M | 2048 | 0.625 | 0.5 |
+
+**New record: EM=0.938 at 524K (1024 chunks)**. But curriculum training is worse than
+fixed@8192 at short lengths (8K-16K). The curriculum overwrites good representations
+from earlier stages. The 12K param retriever hits a ceiling at 2048-way classification
+from 64-dim embeddings.
+
+**Shakespeare validation confirmed** (d=128, char-level LM, 2000 steps):
+- Bare RetNet: val_ppl=5.87 (best)
+- RetNet + Engram: val_ppl=9.95 (worst)
+
+Engram hurts LM. Pipeline must be external.
 
 ## Autonomous Research Loop
 
