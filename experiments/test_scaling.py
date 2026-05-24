@@ -50,8 +50,10 @@ def train_model(model, device, steps=1200, seq_len=512, batch_size=16):
     for step in range(1, steps + 1):
         batch = make_needle_batch(batch_size, seq_len, vocab_size, device)
         optimizer.zero_grad(set_to_none=True)
-        logits, _ = model(batch.input_ids, return_metrics=True)
+        logits, metrics = model(batch.input_ids, return_metrics=True)
         loss = masked_lm_loss(logits, batch.target_ids, batch.loss_mask)
+        if metrics.get("gate_loss") is not None:
+            loss = loss + 0.5 * metrics["gate_loss"]
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
@@ -63,7 +65,7 @@ def train_model(model, device, steps=1200, seq_len=512, batch_size=16):
 
 
 def train_retriever(model, retriever, device, steps=200, seq_len=2048, chunk_size=512):
-    """Train retriever with contrastive loss on 4 chunks."""
+    """Train retriever with contrastive loss on fixed number of chunks."""
     model.eval()
     retriever.train()
     optimizer = torch.optim.AdamW(retriever.parameters(), lr=3e-3)
@@ -104,6 +106,63 @@ def train_retriever(model, retriever, device, steps=200, seq_len=2048, chunk_siz
                 pred = scores[0].argmax().item()
                 hit = 1.0 if pred == target_chunk else 0.0
             print(f"  step={step:4d} loss={loss.item():.4f} chunk_acc={hit:.0f}")
+
+
+def train_retriever_curriculum(
+    model, retriever, device, chunk_size=512,
+):
+    """Train retriever with curriculum: progressively more chunks."""
+    model.eval()
+    retriever.train()
+    optimizer = torch.optim.AdamW(retriever.parameters(), lr=3e-3)
+    vocab_size = model.config.vocab_size
+
+    stages = [
+        (2048, 150),
+        (8192, 150),
+        (32768, 150),
+        (131072, 50),
+    ]
+
+    global_step = 0
+    for seq_len, stage_steps in stages:
+        n_chunks = seq_len // chunk_size
+        print(f"  --- Stage: {n_chunks} chunks @ {seq_len} ({stage_steps} steps) ---")
+        for step in range(1, stage_steps + 1):
+            global_step += 1
+            batch = make_random_needle_batch(1, seq_len, vocab_size, device)
+            input_ids = batch.input_ids
+
+            query_pos = (input_ids == QUERY).nonzero(as_tuple=False)
+            if len(query_pos) == 0:
+                continue
+            target_chunk = get_needle_chunk_index(input_ids, chunk_size)
+
+            with torch.no_grad():
+                chunk_embs, _ = compute_chunk_embeddings(model, input_ids, chunk_size)
+                qp = query_pos[0, 1].item()
+                query_chunk_idx = qp // chunk_size
+                qs = query_chunk_idx * chunk_size
+                qe = min(qs + chunk_size, input_ids.shape[1])
+                query_hidden = model(input_ids[:, qs:qe], return_hidden_only=True)
+                query_emb = query_hidden[:, qp - qs : qp - qs + 1, :].mean(dim=1)
+
+            q = retriever.query_proj(query_emb)
+            c = retriever.chunk_proj(chunk_embs)
+            scores = torch.einsum("bd,bnd->bn", q, c) / (retriever.d_model ** 0.5)
+            loss = F.cross_entropy(scores, torch.tensor([target_chunk], device=device))
+
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(retriever.parameters(), 1.0)
+            optimizer.step()
+
+            if step % 50 == 0 or step == stage_steps:
+                with torch.no_grad():
+                    pred = scores[0].argmax().item()
+                    hit = 1.0 if pred == target_chunk else 0.0
+                print(f"  step={global_step:4d} loss={loss.item():.4f} "
+                      f"chunks={n_chunks} chunk_acc={hit:.0f}")
 
 
 @torch.no_grad()
@@ -147,9 +206,7 @@ def evaluate_pipeline(
         query_emb = query_hidden[:, local_qp : local_qp + 1, :].mean(dim=1)
 
         # Chunk selection with temperature scaling
-        q = retriever.query_proj(query_emb)
-        c = retriever.chunk_proj(chunk_embs)
-        scores = torch.einsum("bd,bnd->bn", q, c) / (retriever.d_model ** 0.5)
+        scores = retriever.score_chunks(query_emb, chunk_embs, query_chunk_idx=query_chunk_idx)
         scaled_scores = scores / selection_temperature
         weights = torch.softmax(scaled_scores, dim=-1)
         selected_idx = weights[0].argmax().item()
@@ -160,6 +217,9 @@ def evaluate_pipeline(
         chunk_end_pos = min(chunk_start_pos + chunk_size, seq_len)
         chunk_tokens = input_ids[0, chunk_start_pos:chunk_end_pos]
 
+        # Find password positions: oracle MARK_THOUGHT
+        # TODO: learned gate for random-position needles requires training on
+        # random-position data (currently trained on fixed-position only).
         mark_positions = (chunk_tokens == MARK_THOUGHT).nonzero(as_tuple=False)
         if len(mark_positions) == 0:
             exact_matches.append(0.0)
@@ -178,8 +238,7 @@ def evaluate_pipeline(
         base_logits, _ = model(chunk_ids, return_metrics=True)
 
         # Per-position readout: each answer position gets its own token's
-        # self-similarity correction. Self-sim (~54) >> cross-sim (~20),
-        # so the correct token dominates at each position.
+        # self-similarity correction.
         readout_scale = 1.0 / (model.config.d_model ** 0.5)
         combined_logits = base_logits.clone()
         local_answer = answer_start - chunk_ids_start
@@ -213,6 +272,9 @@ def main():
     parser.add_argument("--n-layers", type=int, default=8)
     parser.add_argument("--vocab-size", type=int, default=192)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--curriculum", action="store_true", default=False)
+    parser.add_argument("--use-learned-gate", action="store_true", default=False)
+    parser.add_argument("--use-chunk-rope", action="store_true", default=False)
     parser.add_argument("--device", default=None)
     args = parser.parse_args()
 
@@ -235,6 +297,7 @@ def main():
         max_seq_len=args.train_seq_len,
         engram_layers=(),
         use_token_copy_buffer=True,
+        use_learned_gate=args.use_learned_gate,
         milestone_token_ids=(MARK_THOUGHT,),
         token_copy_sinusoidal_pos=True,
         position_encoding_type="sinusoidal",
@@ -253,14 +316,18 @@ def main():
     model.eval()
 
     # Phase 2: Train retriever
-    retriever = ChunkRetriever(d_model=args.d_model).to(device)
+    retriever = ChunkRetriever(d_model=args.d_model, use_chunk_rope=args.use_chunk_rope).to(device)
     print(f"\nChunkRetriever params: {sum(p.numel() for p in retriever.parameters()):,}")
-    print(f"\n=== Phase 2: Train retriever (contrastive) on random-needle@{args.retriever_seq_len} ===")
-    train_retriever(
-        model, retriever, device,
-        steps=args.retriever_steps, seq_len=args.retriever_seq_len,
-        chunk_size=args.chunk_size,
-    )
+    mode_str = "curriculum" if args.curriculum else f"fixed@{args.retriever_seq_len}"
+    print(f"\n=== Phase 2: Train retriever ({mode_str}) ===")
+    if args.curriculum:
+        train_retriever_curriculum(model, retriever, device, chunk_size=args.chunk_size)
+    else:
+        train_retriever(
+            model, retriever, device,
+            steps=args.retriever_steps, seq_len=args.retriever_seq_len,
+            chunk_size=args.chunk_size,
+        )
 
     # Phase 3: Scaling evaluation with temperature sweep
     lengths = [2048, 4096, 8192, 16384, 32768, 65536, 131072]
