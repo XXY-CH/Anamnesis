@@ -185,6 +185,23 @@ Key: TCB is essential for needle. Bare RetNet and Transformer can't solve it.
 
 **Verdict: DISCARDED.** Delta rule is neutral-to-slightly-worse. More complex, less stable training (oscillating loss), no accuracy advantage. Reason: delta rule helps when retention state IS the memory, but our TCB already handles exact recall. Delta rule solves a problem we've already solved. Proof 35 documents the analysis.
 
+### Phase 3.7: Context Compiler — Oracle Proof-of-Concept
+
+**Oracle position lookup**: train at 512, inject password token logits at answer positions.
+
+| Eval Length | Model Only | Oracle Injection | Train Length |
+|-------------|-----------|------------------|-------------|
+| 512 | 1.000 | 1.000 | 512 |
+| 1024 | crash | **1.000** | 512 |
+| 2048 | crash | **1.000** | 512 |
+| 4096 | crash | **1.000** | 512 |
+
+**This proves**: the model's last-chunk processing is sufficient for correct prediction IF the right information is injected. The bottleneck is POSITION SELECTION, not retrieval quality.
+
+**ImportanceScorer fails**: trained with BCE loss on password positions, the MLP scorer ranks positions 1-3 at ranks 29, 36, 42 out of 1024. Hidden states at password positions aren't distinctive — password importance comes from the RELATIONSHIP to the query, not intrinsic properties.
+
+**Key insight**: content-based importance scoring (on hidden states) cannot identify password positions because the hidden state at position 3 (just START+3 tokens) looks like any other short prefix. The model needs a TASK-AWARE selection mechanism, not a content-aware one.
+
 **Key finding: Bare RetNet wins on all metrics.** Engram adds 6.3M hash table params that hurt
 performance on standard LM. The memory mechanisms (Engram, TCB, milestones) are designed for exact
 recall, not statistical next-token prediction. This validates the pipeline design: the Small Reasoner
