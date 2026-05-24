@@ -21,6 +21,7 @@ from ..layers.milestone_gate import MilestoneRetentionGate
 from ..layers.milestone_snapshot import MilestoneSnapshotReadout
 from ..layers.retention import RetentionLayer
 from ..layers.token_copy_buffer import TokenCopyBuffer
+from ..layers.learned_token_gate import LearnedTokenGate
 from .recurrent_state import RecurrentState
 
 
@@ -55,6 +56,7 @@ class RetNetEngramConfig:
     position_encoding_type: str = "learned"  # "learned" or "sinusoidal"
     input_dependent_gamma: bool = False
     retention_output_gate: bool = False
+    use_learned_gate: bool = False
 
 
 def sinusoidal_encoding(
@@ -244,6 +246,14 @@ class RetNetEngramModel(nn.Module):
             if config.use_token_copy_buffer
             else None
         )
+        self.learned_gate = (
+            LearnedTokenGate(
+                d_model=config.d_model,
+                max_store=config.max_milestone_snapshots,
+            )
+            if config.use_learned_gate and config.use_token_copy_buffer
+            else None
+        )
         self.final_norm = nn.RMSNorm(config.d_model)
         self.output_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
@@ -279,17 +289,28 @@ class RetNetEngramModel(nn.Module):
         milestone_mask = self._milestone_mask(input_ids)
         snapshot_source_mask = self._pre_milestone_mask(milestone_mask)
 
-        token_copy_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
-        if self.token_copy_buffer is not None and not disable_snapshots:
-            token_emb = self.token_embedding(input_ids)
-            copy_source_mask = self._content_before_milestone_mask(milestone_mask)
-            collected = self.token_copy_buffer.collect(token_emb, copy_source_mask)
-            if collected is not None:
-                token_copy_cache = collected
-
         depth_sources: list[torch.Tensor] = []
         metrics: dict[str, torch.Tensor | None] = {}
         diagnostics: dict[str, torch.Tensor] = {}
+
+        token_copy_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
+        if self.token_copy_buffer is not None and not disable_snapshots:
+            token_emb = self.token_embedding(input_ids)
+            oracle = self._content_before_milestone_mask(milestone_mask)
+            if self.learned_gate is not None:
+                gate_mask, gate_scores = self.learned_gate(x)
+                if self.training and oracle.any():
+                    copy_source_mask = oracle
+                    metrics["gate_loss"] = self.learned_gate.compute_loss(x, oracle)
+                elif gate_mask is not None:
+                    copy_source_mask = gate_mask
+                else:
+                    copy_source_mask = torch.zeros_like(milestone_mask, dtype=torch.bool)
+            else:
+                copy_source_mask = oracle
+            collected = self.token_copy_buffer.collect(token_emb, copy_source_mask)
+            if collected is not None:
+                token_copy_cache = collected
         snapshot_cache: tuple[torch.Tensor, torch.Tensor] | None = None
         for layer in self.layers:
             x, layer_metrics, layer_diagnostics = layer(
@@ -401,7 +422,15 @@ class RetNetEngramModel(nn.Module):
         token_copy_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
         if self.token_copy_buffer is not None and not disable_snapshots:
             token_emb = self.token_embedding(input_ids)
-            copy_source_mask = self._content_before_milestone_mask(milestone_mask)
+            oracle = self._content_before_milestone_mask(milestone_mask)
+            if self.learned_gate is not None:
+                gate_mask, gate_scores = self.learned_gate(full_emb)
+                if self.training and oracle is not None and oracle.any():
+                    copy_source_mask = oracle
+                else:
+                    copy_source_mask = gate_mask
+            else:
+                copy_source_mask = oracle
             collected = self.token_copy_buffer.collect(token_emb, copy_source_mask)
             if collected is not None:
                 token_copy_cache = collected

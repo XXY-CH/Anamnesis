@@ -338,6 +338,7 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         token_copy_sinusoidal_pos=getattr(args, "position_encoding", "learned") == "sinusoidal",
         input_dependent_gamma=bool(getattr(args, "input_dependent_gamma", False)),
         retention_output_gate=bool(getattr(args, "retention_output_gate", False)),
+        use_learned_gate=bool(getattr(args, "use_learned_gate", False)),
     )
     model = RetNetEngramModel(config)
     override_retention_gamma(model, args.retention_gamma)
@@ -555,6 +556,8 @@ def run_variant(
         else:
             logits, metrics = model(batch.input_ids, return_metrics=True)
         loss = masked_lm_loss(logits, batch.target_ids, batch.loss_mask)
+        if isinstance(metrics, dict) and "gate_loss" in metrics:
+            loss = loss + 0.5 * metrics["gate_loss"]
         loss.backward()
         clip_gradients(args, model, optimizer)
         optimizer.step()
@@ -710,6 +713,8 @@ def parse_args() -> argparse.Namespace:
                         help="Make retention decay gamma input-dependent (like Mamba).")
     parser.add_argument("--retention-output-gate", action="store_true",
                         help="Add input-dependent output gate to retention (like Mamba).")
+    parser.add_argument("--use-learned-gate", action="store_true",
+                        help="Use learned token gate instead of MARK_THOUGHT for TCB selection.")
     parser.add_argument("--gradient-checkpointing", action="store_true",
                         help="Use gradient checkpointing to reduce memory at long sequences.")
     parser.add_argument("--chunk-size", type=int, default=512,

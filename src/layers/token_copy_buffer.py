@@ -55,12 +55,28 @@ class TokenCopyBuffer(nn.Module):
         token_embeddings: torch.Tensor,
         source_mask: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None:
-        """Collect token embeddings and position IDs at source positions."""
+        """Collect token embeddings and position IDs at source positions.
+
+        Handles boolean masks (inference / oracle) and float soft masks
+        (training with LearnedTokenGate). Float masks use differentiable
+        weighted gather so gradients flow through the gate.
+        """
         if self.max_snapshots <= 0:
             return None
 
         batch, seq_len, d_model = token_embeddings.shape
         device = token_embeddings.device
+
+        if source_mask.is_floating_point():
+            k = min(self.max_snapshots, seq_len)
+            topk_weights, topk_indices = source_mask.topk(k, dim=-1)
+            idx_expanded = topk_indices.unsqueeze(-1).expand(-1, -1, d_model)
+            gathered = torch.gather(token_embeddings, 1, idx_expanded)
+            stored = topk_weights.unsqueeze(-1) * gathered
+            pos_ids = topk_indices
+            valid = torch.ones(batch, k, device=device, dtype=torch.bool)
+            return stored, valid, pos_ids
+
         stored = token_embeddings.new_zeros(batch, self.max_snapshots, d_model)
         pos_ids = torch.zeros(batch, self.max_snapshots, device=device, dtype=torch.long)
         valid = torch.zeros(batch, self.max_snapshots, device=device, dtype=torch.bool)
