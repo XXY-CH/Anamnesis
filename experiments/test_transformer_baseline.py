@@ -248,6 +248,8 @@ def main():
     set_seed(args.seed)
 
     lengths = [2048, 4096, 8192, 16384, 32768, 65536, 131072]
+    if args.max_eval_len > 131072:
+        lengths.extend([262144, 524288, 1048576])
     lengths = [l for l in lengths if l <= args.max_eval_len]
     temperatures = [1.0, 0.5, 0.2, 0.1, 0.05]
 
