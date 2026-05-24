@@ -66,7 +66,7 @@ def train_model(model, device, steps=1200, seq_len=512, batch_size=16):
             print(f"  step={step:4d} loss={loss.item():.4f} em={em:.3f}")
 
 
-def train_retriever(model, retriever, device, steps=200, seq_len=2048, chunk_size=512):
+def train_retriever(model, retriever, device, steps=200, seq_len=2048, chunk_size=512, pool_method="mean"):
     """Train retriever with contrastive loss on fixed number of chunks."""
     model.eval()
     retriever.train()
@@ -83,7 +83,7 @@ def train_retriever(model, retriever, device, steps=200, seq_len=2048, chunk_siz
         target_chunk = get_needle_chunk_index(input_ids, chunk_size)
 
         with torch.no_grad():
-            chunk_embs, _ = compute_chunk_embeddings(model, input_ids, chunk_size)
+            chunk_embs, _ = compute_chunk_embeddings(model, input_ids, chunk_size, pool_method=pool_method)
             qp = query_pos[0, 1].item()
             query_chunk_idx = qp // chunk_size
             query_chunk_start = query_chunk_idx * chunk_size
@@ -111,7 +111,7 @@ def train_retriever(model, retriever, device, steps=200, seq_len=2048, chunk_siz
 
 
 def train_retriever_curriculum(
-    model, retriever, device, chunk_size=512,
+    model, retriever, device, chunk_size=512, pool_method="mean",
 ):
     """Train retriever with curriculum: progressively more chunks."""
     model.eval()
@@ -141,7 +141,7 @@ def train_retriever_curriculum(
             target_chunk = get_needle_chunk_index(input_ids, chunk_size)
 
             with torch.no_grad():
-                chunk_embs, _ = compute_chunk_embeddings(model, input_ids, chunk_size)
+                chunk_embs, _ = compute_chunk_embeddings(model, input_ids, chunk_size, pool_method=pool_method)
                 qp = query_pos[0, 1].item()
                 query_chunk_idx = qp // chunk_size
                 qs = query_chunk_idx * chunk_size
@@ -170,7 +170,7 @@ def train_retriever_curriculum(
 @torch.no_grad()
 def evaluate_pipeline(
     model, retriever, device, seq_len, chunk_size=512, eval_batches=8,
-    selection_temperature=1.0,
+    selection_temperature=1.0, pool_method="mean",
 ):
     """Evaluate pipeline: contrastive chunk selection + token embedding readout."""
     model.eval()
@@ -194,7 +194,7 @@ def evaluate_pipeline(
         target_chunk = get_needle_chunk_index(input_ids, chunk_size)
 
         chunk_embs, _ = compute_chunk_embeddings(
-            model, input_ids, chunk_size
+            model, input_ids, chunk_size, pool_method=pool_method
         )
 
         # Query embedding
@@ -280,6 +280,8 @@ def main():
     parser.add_argument("--use-chunk-rope", action="store_true", default=False)
     parser.add_argument("--proj-dim", type=int, default=None,
                         help="Projection dimension for chunk retriever (default: d_model).")
+    parser.add_argument("--pool-method", choices=["mean", "max", "meanmax"], default="mean",
+                        help="Chunk embedding pooling method.")
     parser.add_argument("--device", default=None)
     args = parser.parse_args()
 
@@ -322,21 +324,27 @@ def main():
     model.eval()
 
     # Phase 2: Train retriever
+    pool_method = getattr(args, "pool_method", "mean")
+    emb_dim = args.d_model * (2 if pool_method == "meanmax" else 1)
     retriever = ChunkRetriever(
         d_model=args.d_model,
+        chunk_dim=emb_dim,
         proj_dim=getattr(args, "proj_dim", None),
         use_chunk_rope=args.use_chunk_rope,
     ).to(device)
     print(f"\nChunkRetriever params: {sum(p.numel() for p in retriever.parameters()):,}")
     mode_str = "curriculum" if args.curriculum else f"fixed@{args.retriever_seq_len}"
-    print(f"\n=== Phase 2: Train retriever ({mode_str}) ===")
+    print(f"\n=== Phase 2: Train retriever ({mode_str}, pool={pool_method}) ===")
     if args.curriculum:
-        train_retriever_curriculum(model, retriever, device, chunk_size=args.chunk_size)
+        train_retriever_curriculum(
+            model, retriever, device, chunk_size=args.chunk_size,
+            pool_method=pool_method,
+        )
     else:
         train_retriever(
             model, retriever, device,
             steps=args.retriever_steps, seq_len=args.retriever_seq_len,
-            chunk_size=args.chunk_size,
+            chunk_size=args.chunk_size, pool_method=pool_method,
         )
 
     # Phase 3: Scaling evaluation with temperature sweep
@@ -360,7 +368,7 @@ def main():
             pipeline_em, chunk_acc = evaluate_pipeline(
                 model, retriever, device, length,
                 chunk_size=args.chunk_size, eval_batches=args.eval_batches,
-                selection_temperature=temp,
+                selection_temperature=temp, pool_method=pool_method,
             )
             elapsed = time.time() - t0
             print(

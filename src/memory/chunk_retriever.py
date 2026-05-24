@@ -40,15 +40,17 @@ class ChunkRetriever(nn.Module):
     def __init__(
         self,
         d_model: int,
+        chunk_dim: int | None = None,
         proj_dim: int | None = None,
         use_chunk_rope: bool = False,
     ) -> None:
         super().__init__()
         self.d_model = d_model
-        self.proj_dim = proj_dim or d_model
+        self.chunk_dim = chunk_dim or d_model
+        self.proj_dim = proj_dim or max(d_model, self.chunk_dim)
         self.use_chunk_rope = use_chunk_rope
         self.query_proj = nn.Linear(d_model, self.proj_dim, bias=False)
-        self.chunk_proj = nn.Linear(d_model, self.proj_dim, bias=False)
+        self.chunk_proj = nn.Linear(self.chunk_dim, self.proj_dim, bias=False)
         self.value_proj = nn.Linear(d_model, d_model, bias=False)
         self.logit_scale = nn.Parameter(torch.tensor(0.0))
 
@@ -108,6 +110,7 @@ def compute_chunk_embeddings(
     model: nn.Module,
     input_ids: torch.Tensor,
     chunk_size: int = 512,
+    pool_method: str = "mean",
 ) -> tuple[torch.Tensor, list[torch.Tensor]]:
     """Process a long sequence in chunks and return per-chunk embeddings.
 
@@ -115,9 +118,10 @@ def compute_chunk_embeddings(
         model: RetNetEngramModel (frozen).
         input_ids: [batch=1, seq_len] token IDs.
         chunk_size: size of each chunk.
+        pool_method: "mean", "max", or "meanmax" (concatenated).
 
     Returns:
-        chunk_embs: [batch, num_chunks, d] mean-pooled hidden per chunk.
+        chunk_embs: [batch, num_chunks, d] (or [batch, num_chunks, 2d] for meanmax).
         chunk_hiddens_list: list of [batch, chunk_len, d] raw hiddens per chunk.
     """
     seq_len = input_ids.shape[1]
@@ -128,8 +132,15 @@ def compute_chunk_embeddings(
         end = min(start + chunk_size, seq_len)
         chunk_ids = input_ids[:, start:end]
         hidden = model(chunk_ids, return_hidden_only=True)  # [1, C, d]
-        chunk_embs_list.append(hidden.mean(dim=1))  # [1, d]
+        if pool_method == "max":
+            chunk_embs_list.append(hidden.max(dim=1).values)
+        elif pool_method == "meanmax":
+            chunk_embs_list.append(torch.cat([
+                hidden.mean(dim=1), hidden.max(dim=1).values
+            ], dim=-1))
+        else:
+            chunk_embs_list.append(hidden.mean(dim=1))
         chunk_hiddens_list.append(hidden)
 
-    chunk_embs = torch.stack(chunk_embs_list, dim=1)  # [1, num_chunks, d]
+    chunk_embs = torch.stack(chunk_embs_list, dim=1)
     return chunk_embs, chunk_hiddens_list
