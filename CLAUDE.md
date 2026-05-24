@@ -262,6 +262,23 @@ which works even when the model can't generate correct answers.
 **Discarded**: Position bias helps multi-needle (0.312→0.625) but hurts single-needle (1.000→0.375).
 Reverted. Multi-needle needs task-aware selection, not position bias.
 
+**Controlled baselines** (all ~440K params, 1200 steps, needle@512):
+
+| Model | @512 | @2048 | @4096 | @32768 |
+|-------|------|-------|-------|--------|
+| Bare RetNet | 0.000 | N/A | N/A | N/A |
+| Transformer | 1.000 | N/A | N/A | N/A |
+| Ours (model only) | 1.000 | N/A | N/A | N/A |
+| Ours + pipeline | 1.000 | 1.000 | 1.000 | 1.000 |
+
+Bare RetNet can't solve needle without TCB. Transformer solves at 512 but can't
+extend. Only ours + chunk retrieval extends context to 32K.
+
+**Position-level retrieval on frozen model: FAILS**. Both generation-loss and
+contrastive-BCE training produce random attention (EM=0.000). The frozen model's
+query hidden state carries zero signal about which within-chunk positions are
+important. Implication: within-chunk retrieval must be trained jointly with the model.
+
 ## Autonomous Research Loop
 
 ### Objective
