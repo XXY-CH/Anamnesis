@@ -298,7 +298,7 @@ def main():
         n_heads=args.n_heads,
         n_layers=args.n_layers,
         max_seq_len=args.train_seq_len,
-        engram_layers=(),
+        engram_layers=(2,) if args.use_engram_tcb_trigger else (),
         use_token_copy_buffer=True,
         use_learned_gate=args.use_learned_gate,
         use_engram_tcb_trigger=args.use_engram_tcb_trigger,
