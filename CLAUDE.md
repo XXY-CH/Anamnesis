@@ -225,6 +225,8 @@ decay chain → exact recall. Different tasks need different mechanisms.
 | 8192 | 16 | 1.000 | 1.000 | 2048 (4 chunks) |
 | 16384 | 32 | 1.000 | 1.000 | 2048 (4 chunks) |
 | 32768 | 64 | 1.000 | 1.000 | 2048 (4 chunks) |
+| 65536 | 128 | 1.000 | 1.000 | 2048 (4 chunks) |
+| 131072 | 256 | 1.000 | 1.000 | 2048 (4 chunks) |
 
 **Pipeline**: frozen model → chunk embeddings → contrastive retriever selects needle chunk →
 token embedding readout → logit injection at answer positions.
@@ -233,6 +235,7 @@ token embedding readout → logit injection at answer positions.
 
 1. **Contrastive chunk selection works**: trained in 200 steps, 0.85 top weight on correct chunk.
    Chunk discrimination by frozen model: 0.469 accuracy (vs 0.250 random baseline) at 4x training length.
+   Retriever trained on 4 chunks generalizes to 256 chunks (256x scaling).
 
 2. **Hidden-state readout FAILS**: cross-attention on hidden states → project through token embedding
    gives EM=0.000. Hidden states are high-dimensional abstractions, not token representations.
@@ -240,7 +243,14 @@ token embedding readout → logit injection at answer positions.
 
 3. **Token embedding readout works**: `F.linear(token_embedding(token_id), token_embedding.weight)`
    gives near-perfect logits for the token. This is a self-similarity lookup in embedding space.
-   Combined with chunk selection → EM=1.000 at 64x training length.
+   Combined with chunk selection → EM=1.000 at 256x training length.
+
+**Multi-needle results** (structural selection: latest MARK_THOUGHT chunk):
+
+| Needles | Length | EM | Selection |
+|---------|--------|----|-----------|
+| 1-8 | 2048-16384 | 1.000 | Structural |
+| 1 | 512-131072 | 1.000 | Contrastive |
 
 **Why contrastive, not generation loss?** Generation loss requires the base model to already solve
 the task. Contrastive loss only requires the model's hidden states to distinguish important chunks,
@@ -248,6 +258,9 @@ which works even when the model can't generate correct answers.
 
 **Architecture**: ChunkRetriever = query_proj + chunk_proj (for selection) + value_proj + logit_scale
 (for readout). Only 12K parameters. Selection and readout are separate concerns.
+
+**Discarded**: Position bias helps multi-needle (0.312→0.625) but hurts single-needle (1.000→0.375).
+Reverted. Multi-needle needs task-aware selection, not position bias.
 
 ## Autonomous Research Loop
 
