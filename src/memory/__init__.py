@@ -1,5 +1,5 @@
 """Memory modules — external context storage for small reasoners."""
 
-from .context_compiler import ContextCompiler, CompiledMemory
+from .context_compiler import ContextCompiler, CompiledMemory, MemoryQueryHead
 
-__all__ = ["ContextCompiler", "CompiledMemory"]
+__all__ = ["ContextCompiler", "CompiledMemory", "MemoryQueryHead"]
