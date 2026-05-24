@@ -30,6 +30,24 @@ class ChunkRetriever(nn.Module):
         self.value_proj = nn.Linear(d_model, d_model, bias=False)
         self.logit_scale = nn.Parameter(torch.tensor(0.0))
 
+    def score_chunks(
+        self,
+        query_emb: torch.Tensor,
+        chunk_embs: torch.Tensor,
+    ) -> torch.Tensor:
+        """Score chunks by content similarity.
+
+        Args:
+            query_emb: [batch, d]
+            chunk_embs: [batch, num_chunks, d]
+
+        Returns:
+            scores: [batch, num_chunks]
+        """
+        q = self.query_proj(query_emb)
+        c = self.chunk_proj(chunk_embs)
+        return torch.einsum("bd,bnd->bn", q, c) / (self.d_model ** 0.5)
+
     def forward(
         self,
         query_emb: torch.Tensor,
@@ -49,10 +67,7 @@ class ChunkRetriever(nn.Module):
             logit_correction: [batch, vocab] additive correction to logits.
             weights: [batch, num_chunks] attention weights for analysis.
         """
-        q = self.query_proj(query_emb)
-        c = self.chunk_proj(chunk_embs)
-
-        scores = torch.einsum("bd,bnd->bn", q, c) / (self.d_model ** 0.5)
+        scores = self.score_chunks(query_emb, chunk_embs)
         weights = torch.softmax(scores, dim=-1)
 
         v = self.value_proj(chunk_hiddens)
