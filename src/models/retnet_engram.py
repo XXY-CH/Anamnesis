@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ..layers.attention_residual import BlockAttentionResidual
 from ..layers.engram import HashedNgramEngram
@@ -57,6 +58,7 @@ class RetNetEngramConfig:
     input_dependent_gamma: bool = False
     retention_output_gate: bool = False
     use_learned_gate: bool = False
+    use_engram_tcb_trigger: bool = False
 
 
 def sinusoidal_encoding(
@@ -174,6 +176,7 @@ class DenseRetNetEngramLayer(nn.Module):
         if self.engram is not None and not disable_engram:
             engram_residual, engram_gate = self.engram(self.ffn_norm(x), input_ids)
             x = x + engram_residual
+            metrics[f"layer_{self.layer_idx}_engram_gate"] = engram_gate
             metrics[f"layer_{self.layer_idx}_engram_gate_mean"] = engram_gate.mean()
             metrics[f"layer_{self.layer_idx}_engram_scale"] = self.engram.residual_scale.detach()
             if return_diagnostics:
@@ -294,7 +297,10 @@ class RetNetEngramModel(nn.Module):
         diagnostics: dict[str, torch.Tensor] = {}
 
         token_copy_cache: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None = None
-        if self.token_copy_buffer is not None and not disable_snapshots:
+        engram_gates_for_tcb: list[torch.Tensor] = []
+        use_engram_trigger = self.config.use_engram_tcb_trigger and not disable_snapshots
+
+        if self.token_copy_buffer is not None and not disable_snapshots and not use_engram_trigger:
             token_emb = self.token_embedding(input_ids)
             oracle = self._content_before_milestone_mask(milestone_mask)
             if self.learned_gate is not None:
@@ -311,6 +317,7 @@ class RetNetEngramModel(nn.Module):
             collected = self.token_copy_buffer.collect(token_emb, copy_source_mask)
             if collected is not None:
                 token_copy_cache = collected
+
         snapshot_cache: tuple[torch.Tensor, torch.Tensor] | None = None
         for layer in self.layers:
             x, layer_metrics, layer_diagnostics = layer(
@@ -322,6 +329,10 @@ class RetNetEngramModel(nn.Module):
                 disable_attnres=disable_attnres,
                 return_diagnostics=return_diagnostics,
             )
+            if use_engram_trigger and layer.use_engram:
+                gate_key = f"layer_{layer.layer_idx}_engram_gate"
+                if gate_key in layer_metrics:
+                    engram_gates_for_tcb.append(layer_metrics[gate_key])
             metrics.update(layer_metrics)
             diagnostics.update(layer_diagnostics)
             if self.snapshot_readout is not None and not disable_snapshots:
@@ -329,6 +340,28 @@ class RetNetEngramModel(nn.Module):
                 if collected is not None:
                     snapshot_cache = collected
             depth_sources.append(x.detach() if not self.training else x)
+
+        # Engram-triggered TCB: collect after layers using Engram gate surprise
+        if use_engram_trigger and engram_gates_for_tcb:
+            token_emb = self.token_embedding(input_ids)
+            stacked = torch.stack(engram_gates_for_tcb, dim=0)
+            surprise = stacked.mean(dim=(0, -1))  # [batch, seq_len]
+            # During training: oracle drives TCB, Engram learns via distillation loss
+            if self.training:
+                oracle = self._content_before_milestone_mask(milestone_mask)
+                if oracle.any():
+                    metrics["engram_tcb_distill_loss"] = self._engram_tcb_distill_loss(
+                        surprise, oracle
+                    )
+                copy_source_mask = oracle
+            else:
+                # At inference: Engram surprise drives TCB
+                copy_source_mask = surprise
+            collected = self.token_copy_buffer.collect(token_emb, copy_source_mask)
+            if collected is not None:
+                token_copy_cache = collected
+            metrics["engram_tcb_surprise_mean"] = surprise.mean()
+            metrics["engram_tcb_surprise_max"] = surprise.max()
 
         if self.snapshot_readout is not None and not disable_snapshots:
             snapshot_residual, snapshot_weights = self.snapshot_readout(
@@ -768,3 +801,15 @@ class RetNetEngramModel(nn.Module):
         source_mask = has_future.roll(-1, dims=1)
         source_mask[:, -1] = False
         return source_mask & ~milestone_mask
+
+    @staticmethod
+    def _engram_tcb_distill_loss(
+        surprise: torch.Tensor, oracle: torch.Tensor,
+    ) -> torch.Tensor:
+        """Weighted BCE: train Engram surprise to predict oracle TCB mask."""
+        n_pos = oracle.float().sum(dim=-1, keepdim=True).clamp(min=1.0)
+        n_neg = oracle.shape[-1] - n_pos
+        pos_weight = (n_neg / n_pos).clamp(max=200.0)
+        return F.binary_cross_entropy_with_logits(
+            surprise, oracle.float(), pos_weight=pos_weight,
+        )

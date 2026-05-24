@@ -54,6 +54,8 @@ def train_model(model, device, steps=1200, seq_len=512, batch_size=16):
         loss = masked_lm_loss(logits, batch.target_ids, batch.loss_mask)
         if metrics.get("gate_loss") is not None:
             loss = loss + 0.5 * metrics["gate_loss"]
+        if metrics.get("engram_tcb_distill_loss") is not None:
+            loss = loss + 0.5 * metrics["engram_tcb_distill_loss"]
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
@@ -274,6 +276,7 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--curriculum", action="store_true", default=False)
     parser.add_argument("--use-learned-gate", action="store_true", default=False)
+    parser.add_argument("--use-engram-tcb-trigger", action="store_true", default=False)
     parser.add_argument("--use-chunk-rope", action="store_true", default=False)
     parser.add_argument("--device", default=None)
     args = parser.parse_args()
@@ -298,6 +301,7 @@ def main():
         engram_layers=(),
         use_token_copy_buffer=True,
         use_learned_gate=args.use_learned_gate,
+        use_engram_tcb_trigger=args.use_engram_tcb_trigger,
         milestone_token_ids=(MARK_THOUGHT,),
         token_copy_sinusoidal_pos=True,
         position_encoding_type="sinusoidal",
