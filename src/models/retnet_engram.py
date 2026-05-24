@@ -255,6 +255,7 @@ class RetNetEngramModel(nn.Module):
         disable_attnres: bool = False,
         disable_snapshots: bool = False,
         return_diagnostics: bool = False,
+        return_hidden_only: bool = False,
     ) -> (
         torch.Tensor
         | tuple[torch.Tensor, dict[str, torch.Tensor | None]]
@@ -325,6 +326,8 @@ class RetNetEngramModel(nn.Module):
                     diagnostics["snapshot_valid"] = snapshot_cache[1].detach()
 
         final_hidden = self.final_norm(x)
+        if return_hidden_only:
+            return final_hidden
         logits = self.output_head(final_hidden)
         if self.token_copy_buffer is not None and not disable_snapshots and token_copy_cache is not None:
             copy_readout, copy_weights = self.token_copy_buffer(final_hidden, token_copy_cache)
