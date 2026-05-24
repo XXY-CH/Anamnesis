@@ -455,6 +455,31 @@ Higher-dim projection gives retriever more capacity for 2048-way discrimination.
 doesn't generalize to averaged super-chunk embeddings. Two-stage classification also
 introduces two points of failure.
 
+### Phase 3.13: Real-Data Pipeline Transfer (Shakespeare)
+
+**Shakespeare LM → needle-in-Shakespeare pipeline** (3.6M params, proj_dim=256):
+
+| Phase | Metric | Result |
+|-------|--------|--------|
+| Shakespeare LM (2000 steps) | val_ppl | 6.28 |
+| Needle fine-tuning (1200 steps) | eval_em | **0.000** |
+| Retriever (500 steps, Shakespeare filler) | chunk_acc@temp=1.0 | **0.875** |
+| Pipeline @ 2K | EM | **0.000** |
+
+**Critical finding**: chunk retrieval transfers to real data (0.875 accuracy on Shakespeare
+filler), but token readout fails completely. The LM-trained model can't learn the needle
+task — loss stuck at 4.1 (near random for vocab=67). Shakespeare priors resist the
+synthetic copy task.
+
+**Why**: The retriever scores chunks by content similarity (query vs chunk embeddings).
+This mechanism is content-agnostic — it works on any text. But the token readout requires
+the model to have learned TCB-based copying, which conflicts with LM training.
+
+**Implication**: For real-data deployment, the pipeline should be:
+1. Retriever finds relevant chunks (works!)
+2. Feed selected chunk text to the model as context (RAG-style, no special readout needed)
+3. Model generates from context using its native LM capability
+
 ## Autonomous Research Loop
 
 ### Objective
