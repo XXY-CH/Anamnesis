@@ -162,6 +162,29 @@ Character-level LM on TinyStories (10M train chars, 500K valid, vocab=94, seq_le
 | d128 full (Engram + milestones + TCB) | 8.08M | 3.14 | 15.8K |
 | Engram-only (no milestones/TCB) | 8.02M | 4.41@1K | 20.4K |
 
+### Phase 3.6: Controlled Baselines + Delta Rule (Discarded)
+
+**Needle task with TCB+milestones** (all use ours variant, seq_len=512, 400 steps):
+
+| Variant | eval_em@400 | eval_em=1.0 at step |
+|---------|-------------|---------------------|
+| ours (baseline) | 1.000 | 140 |
+| retnet (bare, no TCB) | 0.000 | — |
+| transformer (bare, no TCB) | 0.000 | — |
+
+Key: TCB is essential for needle. Bare RetNet and Transformer can't solve it.
+
+**Delta rule** (S = (γ-β)S + β·k⊗v) — from Gated DeltaNet (ICLR 2025):
+
+| Config | Seq Len | eval_em=1.0 at step | eval_loss@400 |
+|--------|---------|---------------------|---------------|
+| Baseline | 512 | 140 | — |
+| Delta rule | 512 | 160 | — |
+| Baseline (batch=1) | 2048 | 180 | 0.091 |
+| Delta rule (batch=1) | 2048 | 160 | 0.119 |
+
+**Verdict: DISCARDED.** Delta rule is neutral-to-slightly-worse. More complex, less stable training (oscillating loss), no accuracy advantage. Reason: delta rule helps when retention state IS the memory, but our TCB already handles exact recall. Delta rule solves a problem we've already solved. Proof 35 documents the analysis.
+
 **Key finding: Bare RetNet wins on all metrics.** Engram adds 6.3M hash table params that hurt
 performance on standard LM. The memory mechanisms (Engram, TCB, milestones) are designed for exact
 recall, not statistical next-token prediction. This validates the pipeline design: the Small Reasoner
