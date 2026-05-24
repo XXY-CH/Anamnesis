@@ -278,6 +278,8 @@ def main():
     parser.add_argument("--use-learned-gate", action="store_true", default=False)
     parser.add_argument("--use-engram-tcb-trigger", action="store_true", default=False)
     parser.add_argument("--use-chunk-rope", action="store_true", default=False)
+    parser.add_argument("--proj-dim", type=int, default=None,
+                        help="Projection dimension for chunk retriever (default: d_model).")
     parser.add_argument("--device", default=None)
     args = parser.parse_args()
 
@@ -320,7 +322,11 @@ def main():
     model.eval()
 
     # Phase 2: Train retriever
-    retriever = ChunkRetriever(d_model=args.d_model, use_chunk_rope=args.use_chunk_rope).to(device)
+    retriever = ChunkRetriever(
+        d_model=args.d_model,
+        proj_dim=getattr(args, "proj_dim", None),
+        use_chunk_rope=args.use_chunk_rope,
+    ).to(device)
     print(f"\nChunkRetriever params: {sum(p.numel() for p in retriever.parameters()):,}")
     mode_str = "curriculum" if args.curriculum else f"fixed@{args.retriever_seq_len}"
     print(f"\n=== Phase 2: Train retriever ({mode_str}) ===")

@@ -40,13 +40,15 @@ class ChunkRetriever(nn.Module):
     def __init__(
         self,
         d_model: int,
+        proj_dim: int | None = None,
         use_chunk_rope: bool = False,
     ) -> None:
         super().__init__()
         self.d_model = d_model
+        self.proj_dim = proj_dim or d_model
         self.use_chunk_rope = use_chunk_rope
-        self.query_proj = nn.Linear(d_model, d_model, bias=False)
-        self.chunk_proj = nn.Linear(d_model, d_model, bias=False)
+        self.query_proj = nn.Linear(d_model, self.proj_dim, bias=False)
+        self.chunk_proj = nn.Linear(d_model, self.proj_dim, bias=False)
         self.value_proj = nn.Linear(d_model, d_model, bias=False)
         self.logit_scale = nn.Parameter(torch.tensor(0.0))
 
@@ -76,12 +78,12 @@ class ChunkRetriever(nn.Module):
             query_pos = torch.full(
                 (q.shape[0],), query_chunk_idx, device=device, dtype=torch.long,
             )
-            q = _apply_rope(q, query_pos, self.d_model)
+            q = _apply_rope(q, query_pos, self.proj_dim)
             c = _apply_rope(
-                c, chunk_pos.unsqueeze(0).expand(c.shape[0], -1), self.d_model,
+                c, chunk_pos.unsqueeze(0).expand(c.shape[0], -1), self.proj_dim,
             )
 
-        return torch.einsum("bd,bnd->bn", q, c) / (self.d_model ** 0.5)
+        return torch.einsum("bd,bnd->bn", q, c) / (self.proj_dim ** 0.5)
 
     def forward(
         self,
