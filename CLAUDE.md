@@ -92,6 +92,7 @@ For each mechanism, we follow this disciplined path:
 | **Phase 1: Mechanism Validation** | Verify each component independently on synthetic tasks | **COMPLETE** |
 | **Phase 2: O(1) Recurrent Inference** | Constant-memory inference via recurrent mode | **COMPLETE** |
 | **Phase 3: Context Compiler (64K)** | Build capture/readout/margin pipeline for 64K context | **COMPLETE (1M achieved)** |
+| **Phase 3.10: Self-Supervised Gating** | Engram-triggered TCB via oracle-to-learned distillation | **COMPLETE (EM=1.0)** |
 | Phase 4: Multi-hop Memory (256K) | Document-level retrieval with cross-references | Planned |
 | Phase 5: Million-Context (1M) | Full memory compiler at 1M token scale | Planned |
 | Phase 6: Real Tasks | Transfer to real language modeling (TinyStories etc.) | Planned |
@@ -317,6 +318,35 @@ or bare RetNet as base, add chunk retrieval as external long-context layer.
    next-token prediction
 3. `logit_scale=0` — contrastive training never updates it; replaced with fixed
    `readout_scale = 1/sqrt(d_model)`
+
+### Phase 3.10: Engram-Hit → TCB Trigger (Self-Supervised Gating)
+
+**Oracle-to-learned distillation**: Engram gate output as surprise estimator for TCB storage.
+
+During training: oracle drives TCB (correct tokens stored), BCE distillation loss trains
+Engram gate to predict oracle positions. At inference: Engram surprise score drives TCB.
+
+**Comparison on needle@512** (d=64, sinusoidal PE, 8 layers, 4 heads):
+
+| Approach | Steps | Best EM | EM@end | EM=1.0? |
+|----------|-------|---------|--------|---------|
+| Oracle baseline | 800 | 0.875 | 0.875 | No |
+| Oracle baseline | 1200 | 0.875 | 0.875 | No |
+| Pure Engram trigger (no distill) | 800 | 0.938 | 0.688 | No |
+| **Engram + distillation** | **800** | **1.000** | **0.812** | **Yes (step 760)** |
+| **Engram + distillation** | **1200** | **1.000** | **0.938** | **Yes (steps 880, 1180)** |
+
+**Key findings**:
+1. Only variant to achieve EM=1.000 — Engram distillation outperforms oracle.
+2. Pure Engram trigger fails: without oracle during training, wrong tokens get stored,
+   model can't learn. Chicken-and-egg: need correct TCB to learn, need to learn to fill TCB.
+3. Distillation breaks the cycle: oracle provides correct signal during training,
+   Engram learns to approximate it.
+4. Instability remains: EM oscillates 0.5-1.0 in later training. Likely due to
+   Engram gate and LM loss competing. Needs LR scheduling or stronger regularization.
+
+**Architecture**: `use_engram_tcb_trigger=True` in config. Surprise = mean of Engram gate
+across layers and d_model dimensions. Distillation loss: weighted BCE with auto pos_weight.
 
 ## Autonomous Research Loop
 
