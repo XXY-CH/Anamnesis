@@ -41,7 +41,12 @@ class TransformerLM(nn.Module):
         self.final_norm = nn.LayerNorm(config.d_model)
         self.output_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
-    def forward(self, input_ids: torch.Tensor, return_metrics: bool = False):
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        return_metrics: bool = False,
+        return_hidden_only: bool = False,
+    ):
         batch, seq_len = input_ids.shape
         if seq_len > self.config.max_seq_len:
             raise ValueError(f"seq_len {seq_len} exceeds max_seq_len {self.config.max_seq_len}")
@@ -53,7 +58,10 @@ class TransformerLM(nn.Module):
             diagonal=1,
         )
         x = self.layers(x, mask=mask)
-        logits = self.output_head(self.final_norm(x))
+        x = self.final_norm(x)
+        if return_hidden_only:
+            return x
+        logits = self.output_head(x)
         if return_metrics:
             return logits, {}
         return logits
