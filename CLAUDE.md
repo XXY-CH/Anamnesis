@@ -91,7 +91,7 @@ For each mechanism, we follow this disciplined path:
 |-------|------|--------|
 | **Phase 1: Mechanism Validation** | Verify each component independently on synthetic tasks | **COMPLETE** |
 | **Phase 2: O(1) Recurrent Inference** | Constant-memory inference via recurrent mode | **COMPLETE** |
-| **Phase 3: Context Compiler (64K)** | Build capture/readout/margin pipeline for 64K context | **CURRENT** |
+| **Phase 3: Context Compiler (64K)** | Build capture/readout/margin pipeline for 64K context | **COMPLETE (1M achieved)** |
 | Phase 4: Multi-hop Memory (256K) | Document-level retrieval with cross-references | Planned |
 | Phase 5: Million-Context (1M) | Full memory compiler at 1M token scale | Planned |
 | Phase 6: Real Tasks | Transfer to real language modeling (TinyStories etc.) | Planned |
@@ -278,6 +278,45 @@ extend. Only ours + chunk retrieval extends context to 32K.
 contrastive-BCE training produce random attention (EM=0.000). The frozen model's
 query hidden state carries zero signal about which within-chunk positions are
 important. Implication: within-chunk retrieval must be trained jointly with the model.
+
+### Phase 3.9: 1M Token Scaling + Real-Data Validation
+
+**Pipeline scaling to 1M tokens** (model@512, retriever@8192/16 chunks, 500 steps, lr=3e-3):
+
+| Eval Length | Chunks | Best EM | Best Temp |
+|-------------|--------|---------|-----------|
+| 4K | 8 | 1.000 | 0.5 |
+| 8K | 16 | 1.000 | 0.5 |
+| 16K | 32 | 0.875 | 0.5 |
+| 32K | 64 | 0.750 | 0.2 |
+| 65K | 128 | 1.000 | 0.1 |
+| 131K | 256 | 0.875 | 0.5 |
+| 1M | 2048 | 0.875 | 0.1 |
+
+Retriever trained on 16 chunks generalizes to 2048. Temperature scaling critical:
+lower temperatures for higher chunk counts. Pipeline EM = chunk accuracy (readout
+is perfect when correct chunk is selected).
+
+**Real-data Shakespeare baselines** (1.67M params, char-level LM, 2000 steps):
+
+| Model | val_ppl |
+|-------|---------|
+| Transformer | 4.371 (best) |
+| Bare RetNet | 7.115 |
+| Ours (TCB+milestones) | 9.509 (worst) |
+
+**Critical finding**: TCB/milestones hurt general LM performance. These mechanisms
+are specialized for retrieval, not language modeling. The pipeline must be an
+external module, not baked into the base model. Future direction: use Transformer
+or bare RetNet as base, add chunk retrieval as external long-context layer.
+
+**Three bugs fixed in this phase**:
+1. Per-position readout (not summed) — summed readout promotes all password tokens
+   at all positions equally, can't distinguish position
+2. `answer_start = query_pos` (not +1) — mask starts at QUERY position in
+   next-token prediction
+3. `logit_scale=0` — contrastive training never updates it; replaced with fixed
+   `readout_scale = 1/sqrt(d_model)`
 
 ## Autonomous Research Loop
 
