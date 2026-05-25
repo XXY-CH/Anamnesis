@@ -1,6 +1,6 @@
 <div align="center">
 
-# Engram Retention
+# Anamnesis
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20041183.svg)](https://doi.org/10.5281/zenodo.20041183)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC--BY--4.0-lightgrey.svg)](LICENSE)
@@ -10,33 +10,29 @@
 
 **A proof-aligned PyTorch research scaffold for budgeted long-context memory.**
 
-RetNet recurrence + Block Attention Residuals + hashed Engram lookup +
-milestone snapshots.
+RetNet recurrence + Kimi-style Block Attention Residuals + DeepSeek-style gated Engram lookup + RAG separation.
 
 </div>
 
+---
+
 ## What This Is
 
-Engram Retention is an early-stage research codebase for studying whether small,
-auditable auxiliary-memory paths can improve sparse long-context recall without
-requiring a full KV cache over every previous token.
+**Anamnesis** (from the Greek philosophy of *recalling innate knowledge*) is an early-stage research codebase studying whether small, auditable auxiliary-memory paths can improve sparse long-context recall without requiring a full KV cache over every previous token.
 
-The project combines implementation, tests, synthetic diagnostics, proof notes,
-and citation metadata in one repository. The goal is not just to propose an
-architecture, but to keep each claim close to code that can be run, ablated, and
-falsified.
+The project tightly integrates implementation, test suites, synthetic diagnostics, proof notes, and citation metadata in one repository. The goal is to keep each architectural claim closely bound to code that can be run, ablated, and empirically falsified.
 
-## What This Is Not
+---
 
-This repository does **not** claim a universal replacement for Transformer
-attention or general-purpose LLM memory. The active claim is conditional and
-bounded:
+## Key Pillars of the Architecture
 
-- RetNet-style recurrence handles compact streaming sequence mixing.
-- Block Attention Residuals reuse depth-wise intermediate states.
-- Hashed Engram lookup injects deterministic N-gram memory as a residual branch.
-- Milestone gates and snapshots preserve a small selected set of token-time
-  facts under explicit budgets.
+*   **RetNet Recurrence**: Handles streaming, horizontally-causal sequence mixing with linear $O(1)$ inference cost, supporting both fixed decay rates and dynamic input-dependent decay.
+*   **Block Attention Residuals (Kimi Style)**: Simplifies the vertical residual stream by replacing uniform addition with zero-parameter softmax attention over preceding layer/block outputs.
+*   **Hashed N-gram Engram (DeepSeek Style)**: Retrieves static, context-independent priors via Deterministic Multi-Head hashing, fuzed with dynamic hidden states via an **isotropic scalar gate** (Eq 4) and a **causal depthwise Conv1D** (Eq 5) to preserve semantic direction.
+*   **RAG Separation Pipeline**: Decouples discrete similarity retrieval from continuous language generation, prepending relevant text chunks directly in the prompt to preserve the contextual Jacobian chain and avoid logit rank deficiency.
+*   **Milestone Gates and Copy Buffers**: Protects critical position decays and implements precise, budget-bounded episodic fact recall under explicit resource constraints.
+
+---
 
 ## Architecture At A Glance
 
@@ -47,19 +43,19 @@ input token ids
 token embedding + position embedding
     |
     v
-Dense RetNet-Engram layers
+Dense RetNet-Engram layers (Anamnesis block)
     |
     |-- RetentionLayer
-    |     parallel/recurrent sequence mixing with fixed per-head decay
+    |     parallel/recurrent sequence mixing with causal exponential decay
     |
     |-- Dense FFN
-    |     phase-1 channel-mixing baseline; MoE is deferred
+    |     phase-1 channel-mixing baseline with SiLU activations
     |
     |-- HashedNgramEngram
-    |     deterministic N-gram lookup with gated residual injection
+    |     deterministic N-gram lookup with key RMSNorm, scalar gating, and causal Conv1D
     |
     |-- BlockAttentionResidual
-    |     depth-axis readout over earlier block/layer states
+    |     zero-parameter depth-axis softmax attention over earlier block outputs
     |
     |-- MilestoneRetentionGate
     |     optional selected-token decay protection
@@ -74,6 +70,8 @@ RMSNorm + output projection
 next-token logits + diagnostic metrics
 ```
 
+---
+
 ## Repository Map
 
 | Path | Role |
@@ -84,14 +82,13 @@ next-token logits + diagnostic metrics
 | [src/training/](src/training/README.md) | Lightweight toy training helpers. |
 | [experiments/](experiments/README.md) | Synthetic diagnostic runner and experiment configs. |
 | [analysis/](analysis/README.md) | Plotting scripts for curated figures. |
-| [tests/](tests/README.md) | Unit and integration smoke tests. |
+| [tests/](tests/README.md) | Unit, integration, and paper-faithfulness tests. |
 | [docs/](docs/README.md) | Methodology, architecture notes, proof trail, and progress records. |
-| [docs/proofs/](docs/proofs/README.md) | Theorem drafts, assumption audits, and proof closure notes. |
+| [docs/proofs/](docs/proofs/README.md) | Theorem drafts, assumption audits, and proof status registry. |
 | [papers/](papers/README.md) | Human-written reading notes over the local literature corpus. |
 | [references/](references/README.md) | BibTeX and paper manifest; mirrored PDFs are not committed. |
 
-PDF papers, local virtual environments, generated experiment results, temporary
-extraction text, and agent runtime state are intentionally excluded from Git.
+---
 
 ## Install
 
@@ -108,6 +105,8 @@ For a lighter environment:
 python -m pip install -r requirements.txt
 ```
 
+---
+
 ## Verify
 
 ```bash
@@ -116,10 +115,9 @@ python -m black --check .
 python -m pytest
 ```
 
-Expected baseline: all tests pass. The current public test suite covers
-retention decay, recurrent state shape, Engram determinism, Block AttnRes
-readout, milestone snapshots, full model forward/backward, and toy training
-updates.
+All 25 unit and paper-faithfulness tests should pass. The test suite covers retention decay, recurrent state shape, Engram determinism, Block AttnRes readout, milestone snapshots, paper-faithfulness configurations, full model forward/backward, and toy training updates.
+
+---
 
 ## Run A Synthetic Diagnostic
 
@@ -150,34 +148,30 @@ python experiments/train_synthetic.py \
   --out-dir experiments/results/needle_snapshot_eval
 ```
 
-Generated result directories are ignored by default. Commit only curated
-summaries, paper-ready figures, or documented conclusions.
+---
 
 ## Research Trail
 
-Recommended reading order:
+Recommended reading order in `docs/proofs/`:
 
-1. [docs/proofs/proof_plan.md](docs/proofs/proof_plan.md)
-2. [docs/proofs/pdf_assumption_audit_2026-05-03.md](docs/proofs/pdf_assumption_audit_2026-05-03.md)
-3. [docs/proofs/25-general-llm-replacement-necessary-conditions.md](docs/proofs/25-general-llm-replacement-necessary-conditions.md)
-4. [docs/progress/2026-05-04-external-review-response.md](docs/progress/2026-05-04-external-review-response.md)
-5. [docs/proofs/15-proof-closure.md](docs/proofs/15-proof-closure.md)
+1. [00-proof-status-registry.md](docs/proofs/00-proof-status-registry.md) (All 42 proofs tracked here)
+2. [proof_plan.md](docs/proofs/proof_plan.md)
+3. [pdf_assumption_audit_2026-05-03.md](docs/proofs/pdf_assumption_audit_2026-05-03.md)
+4. [40-scalar-gating-lower-bound.md](docs/proofs/40-scalar-gating-lower-bound.md)
+5. [41-rag-separation-principle.md](docs/proofs/41-rag-separation-principle.md)
+6. [42-rope-snr-collapse.md](docs/proofs/42-rope-snr-collapse.md)
+7. [15-proof-closure.md](docs/proofs/15-proof-closure.md)
 
-The proof trail deliberately separates:
-
-- RetNet recurrence from exact token-time recall.
-- Depth-axis Block AttnRes from token-time memory.
-- Engram lookup from final-layer logit bias.
-- Dense phase-1 evidence from future MoE capacity extensions.
+---
 
 ## Citation
 
 If this repository helps your work, cite the Zenodo DOI:
 
 ```bibtex
-@software{xie_2026_engram_retention,
+@software{xie_2026_anamnesis,
   author = {Xie, Xingyu},
-  title = {Engram Retention},
+  title = {Anamnesis},
   year = {2026},
   doi = {10.5281/zenodo.20041183},
   url = {https://github.com/XXY-CH/Anamnesis},
@@ -187,7 +181,8 @@ If this repository helps your work, cite the Zenodo DOI:
 
 The same metadata is available in [CITATION.cff](CITATION.cff).
 
+---
+
 ## License
 
-Creative Commons Attribution 4.0 International (`CC-BY-4.0`). See
-[LICENSE](LICENSE).
+Creative Commons Attribution 4.0 International (`CC-BY-4.0`). See [LICENSE](LICENSE).
