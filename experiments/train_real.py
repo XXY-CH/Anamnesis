@@ -18,6 +18,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from src.models import AnamnesisModel
 from src.models.anamnesis import AnamnesisConfig
+from src.models.transformer_baseline import TransformerConfig, TransformerLM
 
 CACHE_DIR = Path("experiments/data")
 
@@ -169,7 +170,19 @@ def _load_tinystories(split: str, max_chars: int | None = None) -> str:
 # Model construction
 # ---------------------------------------------------------------------------
 
-def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel:
+def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel | TransformerLM:
+    if getattr(args, "model_type", "anamnesis") == "transformer":
+        config = TransformerConfig(
+            vocab_size=vocab_size,
+            d_model=args.d_model,
+            n_heads=args.n_heads,
+            n_layers=args.n_layers,
+            d_ff=args.d_ff or args.d_model * 4,
+            max_seq_len=args.seq_len * 2,  # support RAG context beyond training length
+            dropout=args.dropout,
+        )
+        return TransformerLM(config)
+
     config = AnamnesisConfig(
         vocab_size=vocab_size,
         d_model=args.d_model,
@@ -356,6 +369,7 @@ def train(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Real-data LM training")
 
+    p.add_argument("--model-type", choices=["anamnesis", "transformer"], default="anamnesis")
     p.add_argument("--dataset", choices=["tinystories", "shakespeare"], default="tinystories")
     p.add_argument("--max-train-chars", type=int, default=10_000_000)
     p.add_argument("--max-valid-chars", type=int, default=500_000)
