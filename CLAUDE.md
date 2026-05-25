@@ -497,12 +497,15 @@ the model to have learned TCB-based copying, which conflicts with LM training.
 
 ### Phase 3.14: Scalar Gate PPL Validation
 
-**Controlled experiment** (d=128, char-level Shakespeare, 2000 steps, sinusoidal PE, attnres_every=0):
+**Controlled experiment** (d=128, char-level Shakespeare, 2000 steps, sinusoidal PE):
 
 | Config | val_ppl | val_loss | Params |
 |--------|---------|----------|--------|
 | Bare RetNet | 9.78 | 2.281 | 1.67M |
 | RetNet + scalar-gated Engram | **7.59** | **2.027** | ~8M |
+| + Engram + AttnRes | 7.72 | 2.044 | ~8M |
+
+**AttnRes verdict**: Neutral on real LM (7.72 vs 7.59 without). Kept optional, disabled for LM.
 
 **Key finding**: Scalar-gated Engram improves LM PPL by 22%. This validates Proof 40's
 prediction that initial perturbation is O(s·e^b) ≈ 10⁻⁵ (negligible). The Engram's static
