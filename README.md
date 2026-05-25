@@ -36,38 +36,93 @@ The project tightly integrates implementation, test suites, synthetic diagnostic
 
 ## Architecture At A Glance
 
-```text
-input token ids
-    |
-    v
-token embedding + position embedding
-    |
-    v
-Dense RetNet-Engram layers (Anamnesis block)
-    |
-    |-- RetentionLayer
-    |     parallel/recurrent sequence mixing with causal exponential decay
-    |
-    |-- Dense FFN
-    |     phase-1 channel-mixing baseline with SiLU activations
-    |
-    |-- HashedNgramEngram
-    |     deterministic N-gram lookup with key RMSNorm, scalar gating, and causal Conv1D
-    |
-    |-- BlockAttentionResidual
-    |     zero-parameter depth-axis softmax attention over earlier block outputs
-    |
-    |-- MilestoneRetentionGate
-    |     optional selected-token decay protection
-    |
-    |-- MilestoneSnapshotReadout
-    |     bounded snapshot cache plus readout branch
-    |
-    v
-RMSNorm + output projection
-    |
-    v
-next-token logits + diagnostic metrics
+Our unified dual-brain architecture (Anamnesis) coordinates the sequence, depth, and memory axes:
+
+```mermaid
+graph TB
+    %% Styling definitions
+    classDef inputStyle fill:#1e1e2e,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4;
+    classDef embStyle fill:#313244,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
+    classDef blockStyle fill:#181825,stroke:#f38ba8,stroke-width:3px,color:#cdd6f4;
+    classDef layerStyle fill:#313244,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
+    classDef memStyle fill:#11111b,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4;
+    classDef outputStyle fill:#1e1e2e,stroke:#fab387,stroke-width:2px,color:#cdd6f4;
+
+    %% Nodes and relationships
+    Input["Input Tokens [batch, seq_len]"]:::inputStyle
+    Input --> Embed["Token Embedding + PE (sinusoidal / learned)"]:::embStyle
+    Embed --> Block1["Anamnesis Block (DenseRetNetEngramLayer x N)"]:::blockStyle
+
+    subgraph Block ["Inside the Anamnesis Layer Block"]
+        direction TB
+        X["Hidden States (x)"]
+        
+        %% Retention Path
+        X --> Norm1["RMSNorm"]
+        Norm1 --> Ret["RetentionLayer<br/>(Sequence Axis: Causal Decay & Dynamic Gamma)"]:::layerStyle
+        
+        %% FFN Path
+        X --> Norm2["RMSNorm"]
+        Norm2 --> FFN["Dense FFN<br/>(Channel Axis: SiLU Activation)"]:::layerStyle
+        
+        %% Sum 1
+        Ret --> Sum1["+"]
+        FFN --> Sum1
+        X --> Sum1
+        
+        %% Engram Path (Selected Layers, e.g., Layer 2)
+        Sum1 -->|"ffn_norm(x)"| EngramNorm["RMSNorm"]
+        EngramNorm --> Engram["HashedNgramEngram<br/>(Memory Axis: Deterministic Multi-Head Lookup)"]:::memStyle
+        
+        subgraph EngramSub ["Engram Fusion (DeepSeek Eq 4 & 5)"]
+            direction TB
+            Key["Projected Key: W_K e_t"] --> KeyNorm["RMSNorm"]
+            Val["Projected Value: W_V e_t"]
+            Score["Dot-product Score: (RMSNorm(h) * RMSNorm(key)) / sqrt(d)"]
+            Score --> Gate["Isotropic Scalar Gate:<br/>sigmoid(score + b) (b = -3.0)"]:::layerStyle
+            Gate --> Mult["Gated Value:<br/>gate * Val"]
+            Mult --> Conv["Causal Depthwise Conv1D<br/>(kernel=4, dilation=3, groups=d_model)"]:::layerStyle
+            Conv --> SiLU["SiLU Activation"]
+            SiLU --> Y["Engram Output (Y)"]
+        end
+        Engram --> EngramSub
+        
+        Sum1 --> AddEngram["+"]
+        Y -->|Residual Scale s| AddEngram
+        
+        %% AttnRes Path (Every 4 Layers, e.g., Layer 3, 7)
+        AddEngram --> AttnRes["BlockAttentionResidual<br/>(Depth Axis: Kimi Softmax Attn)"]:::memStyle
+        
+        subgraph AttnResSub ["AttnRes Readout"]
+            direction TB
+            Stacked["Stacked Previous Block Outputs"] --> AttnNorm["RMSNorm"]
+            Query["Pseudo-Query w_l"]
+            Query --> Softmax["Softmax Weighted Blending"]
+            AttnNorm --> Softmax
+            Softmax --> Readout["Depth Readout (zero parameters, no value projections)"]
+        end
+        AttnRes --> AttnResSub
+        
+        AddEngram --> AddAttnRes["+"]
+        Readout -->|Residual Scale s| AddAttnRes
+        
+        %% Depth Cache
+        AddAttnRes --> DepthSource["depth_sources.append(x)"]
+    end
+    
+    Block1 --> Block
+    AddAttnRes --> FinalNorm["Final RMSNorm"]:::outputStyle
+    
+    %% Episodic Readouts
+    FinalNorm --> Head["Output Head (Linear Logits)"]:::outputStyle
+    FinalNorm -->|"optional"| TCB["Token Copy Buffer<br/>(Episodic Memory cosine lookup)"]:::memStyle
+    FinalNorm -->|"optional"| Snapshot["Milestone Snapshot Readout<br/>(State snapshot cache)"]:::memStyle
+    
+    Head --> SumLogits["+"]
+    TCB -->|copy_logits| SumLogits
+    Snapshot -->|snapshot_logits| SumLogits
+    
+    SumLogits --> Output["Vocabulary Logits"]:::outputStyle
 ```
 
 ---
