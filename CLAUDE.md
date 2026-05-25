@@ -455,6 +455,12 @@ Higher-dim projection gives retriever more capacity for 2048-way discrimination.
 doesn't generalize to averaged super-chunk embeddings. Two-stage classification also
 introduces two points of failure.
 
+**Chunk-level RoPE — DISCARDED.** Applies rotary position encoding to chunk embeddings
+during scoring. Result: catastrophic collapse at long lengths (1M: 0.875→0.250).
+With 2048 chunks, rotation angles become too large, destroying content-based similarity.
+The retriever becomes position-biased and can't find the needle by content. Consistent
+with Phase 3.8 finding that position bias hurts single-needle accuracy.
+
 ### Phase 3.13: Real-Data Pipeline Transfer (Shakespeare)
 
 **Shakespeare LM → needle-in-Shakespeare pipeline** (3.6M params, proj_dim=256):
