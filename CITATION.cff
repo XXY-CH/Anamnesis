@@ -1,13 +1,13 @@
 cff-version: 1.2.0
 message: "If you use this research code, please cite it using this metadata."
-title: "Engram Retention"
+title: "Anamnesis"
 authors:
   - family-names: "Xie"
     given-names: "Xingyu"
 year: 2026
 doi: "10.5281/zenodo.20041183"
 license: "CC-BY-4.0"
-repository-code: "https://github.com/XXY-CH/engram-retention"
+repository-code: "https://github.com/XXY-CH/Anamnesis"
 abstract: "PyTorch research scaffold for RetNet-style retention, Block Attention Residuals, hashed Engram lookup, and bounded milestone snapshot readout."
 keywords:
   - RetNet

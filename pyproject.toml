@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "engram-retention-research"
+name = "anamnesis-research"
 version = "0.1.0"
 description = "PyTorch research scaffold for RetNet, Block Attention Residuals, and hashed Engram memory."
 readme = "README.md"
@@ -44,8 +44,8 @@ notebook = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/XXY-CH/engram-retention"
-Repository = "https://github.com/XXY-CH/engram-retention"
+Homepage = "https://github.com/XXY-CH/Anamnesis"
+Repository = "https://github.com/XXY-CH/Anamnesis"
 
 [tool.setuptools.packages.find]
 include = ["src*"]

@@ -20,6 +20,7 @@ env/
 .omx/
 AGENTS.md
 CLAUDE.md
+.antigravitycli/
 
 # OS/editor noise
 .DS_Store
