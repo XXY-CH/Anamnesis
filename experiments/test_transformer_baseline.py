@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
 import torch
 
 from src.memory.chunk_retriever import ChunkRetriever, compute_chunk_embeddings
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 from src.models.transformer_baseline import TransformerConfig, TransformerLM
 from experiments.train_synthetic import (
     masked_exact_match,
@@ -193,7 +193,7 @@ def evaluate_pipeline(
 
 
 def make_retnet(args, device):
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=args.vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -205,7 +205,7 @@ def make_retnet(args, device):
         token_copy_sinusoidal_pos=True,
         position_encoding_type="sinusoidal",
     )
-    return RetNetEngramModel(config).to(device)
+    return AnamnesisModel(config).to(device)
 
 
 def make_transformer(args, device):

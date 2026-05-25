@@ -69,7 +69,7 @@ token_copy_pos_ids
 token_copy_valid_count
 ```
 
-These diagnostics are emitted by `RetNetEngramModel(..., return_diagnostics=True)`
+These diagnostics are emitted by `AnamnesisModel(..., return_diagnostics=True)`
 when TokenCopyBuffer is active. This makes correct-slot attention measurable in
 the next length-scaling experiment.
 

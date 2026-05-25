@@ -16,7 +16,7 @@ As of 2026-05-07, the form asks for:
 
 ## Suggested Repository URL
 
-`https://github.com/XXY-CH/engram-retention`
+`https://github.com/XXY-CH/Anamnesis`
 
 ## Suggested Role
 

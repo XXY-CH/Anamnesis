@@ -27,7 +27,7 @@ from .recurrent_state import RecurrentState
 
 
 @dataclass
-class RetNetEngramConfig:
+class AnamnesisConfig:
     vocab_size: int
     d_model: int = 128
     n_heads: int = 4
@@ -81,12 +81,12 @@ def sinusoidal_encoding(
     return torch.cat([angles.sin(), angles.cos()], dim=-1)
 
 
-class DenseRetNetEngramLayer(nn.Module):
+class AnamnesisLayer(nn.Module):
     """One Dense RetNet block with optional Engram and Block AttnRes branches."""
 
     def __init__(
         self,
-        config: RetNetEngramConfig,
+        config: AnamnesisConfig,
         layer_idx: int,
         use_engram: bool,
         use_attnres: bool,
@@ -196,10 +196,10 @@ class DenseRetNetEngramLayer(nn.Module):
         return x, metrics, diagnostics
 
 
-class RetNetEngramModel(nn.Module):
+class AnamnesisModel(nn.Module):
     """Small language model aligned to the Dense-first phase-1 proof architecture."""
 
-    def __init__(self, config: RetNetEngramConfig) -> None:
+    def __init__(self, config: AnamnesisConfig) -> None:
         super().__init__()
         self.config = config
         self.token_embedding = nn.Embedding(config.vocab_size, config.d_model)
@@ -211,7 +211,7 @@ class RetNetEngramModel(nn.Module):
         engram_layers = set(config.engram_layers)
         self.layers = nn.ModuleList(
             [
-                DenseRetNetEngramLayer(
+                AnamnesisLayer(
                     config=config,
                     layer_idx=i,
                     use_engram=i in engram_layers,

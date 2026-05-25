@@ -1,10 +1,10 @@
-from .retnet_engram import DenseRetNetEngramLayer, RetNetEngramConfig, RetNetEngramModel
+from .anamnesis import AnamnesisLayer, AnamnesisConfig, AnamnesisModel
 from .transformer_baseline import TransformerConfig, TransformerLM
 
 __all__ = [
-    "DenseRetNetEngramLayer",
-    "RetNetEngramConfig",
-    "RetNetEngramModel",
+    "AnamnesisLayer",
+    "AnamnesisConfig",
+    "AnamnesisModel",
     "TransformerConfig",
     "TransformerLM",
 ]

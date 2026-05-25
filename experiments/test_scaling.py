@@ -22,7 +22,7 @@ import torch
 import torch.nn.functional as F
 
 from src.memory.chunk_retriever import ChunkRetriever, compute_chunk_embeddings
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 from experiments.train_synthetic import (
     masked_exact_match,
     masked_lm_loss,
@@ -334,7 +334,7 @@ def main():
 
     set_seed(args.seed)
 
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=args.vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -348,7 +348,7 @@ def main():
         token_copy_sinusoidal_pos=True,
         position_encoding_type="sinusoidal",
     )
-    model = RetNetEngramModel(config).to(device)
+    model = AnamnesisModel(config).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model params: {n_params:,}")
 

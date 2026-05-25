@@ -46,12 +46,25 @@ class HashedNgramEngram(nn.Module):
         self._move_tables_to_table_device()
 
         self.hidden_norm = nn.RMSNorm(d_model)
-        self.memory_norm = nn.RMSNorm(d_model)
+        self.key_norm = nn.RMSNorm(d_model)
         self.value_proj = nn.Linear(d_model, d_model, bias=False)
         self.key_proj = nn.Linear(d_model, d_model, bias=False)
         self.gate_bias = nn.Parameter(torch.tensor(float(gate_bias)))
         self.dropout = nn.Dropout(dropout)
         self.residual_scale = nn.Parameter(torch.tensor(float(init_scale)))
+
+        self.conv_norm = nn.RMSNorm(d_model)
+        self.conv = nn.Conv1d(
+            in_channels=d_model,
+            out_channels=d_model,
+            kernel_size=4,
+            stride=1,
+            padding=0,
+            dilation=3,
+            groups=d_model,
+            bias=False,
+        )
+        nn.init.normal_(self.conv.weight, std=d_model**-0.5)
 
         salts = torch.arange(1, max_ngram * num_hash_heads + 1, dtype=torch.long)
         self.register_buffer("salts", salts * 0x9E3779B1, persistent=False)
@@ -138,9 +151,22 @@ class HashedNgramEngram(nn.Module):
         )
 
         norm_hidden = self.hidden_norm(hidden)
-        norm_memory = self.memory_norm(memory)
-        score = (norm_hidden * self.key_proj(norm_memory)).sum(dim=-1, keepdim=True) / (self.d_model ** 0.5)
+        key = self.key_proj(memory)
+        norm_key = self.key_norm(key)
+
+        score = (norm_hidden * norm_key).sum(dim=-1, keepdim=True) / (self.d_model ** 0.5)
         gate = torch.sigmoid(score + self.gate_bias)
-        value = self.value_proj(norm_memory)
-        residual = self.residual_scale.abs() * self.dropout(gate * value)
+
+        value = self.value_proj(memory)
+        gated = gate * value
+
+        # Causal depthwise 1D convolution (Equation 5)
+        # padding size = (kernel_size - 1) * dilation = 3 * 3 = 9
+        # conv_in: [batch, d_model, seq_len]
+        conv_in = self.conv_norm(gated).transpose(1, 2)
+        padded = torch.nn.functional.pad(conv_in, (9, 0))
+        conv_out = self.conv(padded).transpose(1, 2) # [batch, seq_len, d_model]
+
+        Y = torch.nn.functional.silu(conv_out) + gated
+        residual = self.residual_scale.abs() * self.dropout(Y)
         return residual, gate

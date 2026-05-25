@@ -138,7 +138,7 @@ class ContextCompiler(nn.Module):
         """Compile a long sequence into fixed-size memory.
 
         Args:
-            model: RetNetEngramModel to use for chunk processing.
+            model: AnamnesisModel to use for chunk processing.
             input_ids: Token IDs [batch=1, seq_len].
 
         Returns:

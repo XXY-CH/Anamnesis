@@ -19,7 +19,7 @@ from experiments.train_synthetic import (
     masked_lm_loss,
     set_seed,
 )
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 
 
 def run_curriculum(
@@ -32,7 +32,7 @@ def run_curriculum(
     set_seed(42)
 
     max_len = max(p[0] for p in phases) * 4
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=192, d_model=64, n_heads=4, n_layers=8,
         max_seq_len=max_len, dropout=0.0,
         engram_layers=(2,), engram_num_slots=8192,
@@ -43,7 +43,7 @@ def run_curriculum(
         max_milestone_snapshots=8, use_token_copy_buffer=True,
         position_encoding_type="sinusoidal",
     )
-    model = RetNetEngramModel(config).to(device)
+    model = AnamnesisModel(config).to(device)
     print(f"\n=== {label} ===", flush=True)
     print(f"Model params: {sum(p.numel() for p in model.parameters()):,}", flush=True)
 

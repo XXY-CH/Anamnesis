@@ -214,7 +214,7 @@ The current codebase now implements the small aligned research scaffold:
 - `src/layers/attention_residual.py`: Kimi-style depth-axis Block Attention Residual readout over layer/block sources.
 - `src/layers/engram.py`: deterministic multi-head N-gram hash lookup Engram.
 - `src/layers/milestone_snapshot.py`: bounded token-time milestone snapshot readout for exact recall diagnostics.
-- `src/models/retnet_engram.py`: Dense RetNet + optional Engram + optional Block AttnRes + optional snapshot readout.
+- `src/models/anamnesis.py`: Dense RetNet + optional Engram + optional Block AttnRes + optional snapshot readout.
 - `experiments/train_synthetic.py`: synthetic diagnostic runner for `ours`, ablations, RetNet, and Transformer baselines.
 
 The larger research program still needs:

@@ -4,7 +4,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20041183.svg)](https://doi.org/10.5281/zenodo.20041183)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC--BY--4.0-lightgrey.svg)](LICENSE)
-[![CI](https://github.com/XXY-CH/engram-retention/actions/workflows/ci.yml/badge.svg)](https://github.com/XXY-CH/engram-retention/actions/workflows/ci.yml)
+[![CI](https://github.com/XXY-CH/Anamnesis/actions/workflows/ci.yml/badge.svg)](https://github.com/XXY-CH/Anamnesis/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](pyproject.toml)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c.svg)](requirements.txt)
 
@@ -180,7 +180,7 @@ If this repository helps your work, cite the Zenodo DOI:
   title = {Engram Retention},
   year = {2026},
   doi = {10.5281/zenodo.20041183},
-  url = {https://github.com/XXY-CH/engram-retention},
+  url = {https://github.com/XXY-CH/Anamnesis},
   license = {CC-BY-4.0}
 }
 ```

@@ -38,8 +38,6 @@ class BlockAttentionResidual(nn.Module):
         nn.init.normal_(self.query, std=d_model**-0.5)
 
         self.key_norm = nn.RMSNorm(d_model)
-        self.value_proj = nn.Linear(d_model, d_model, bias=False)
-        self.out_proj = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
         self.residual_scale = nn.Parameter(torch.tensor(float(init_scale)))
 
@@ -65,10 +63,9 @@ class BlockAttentionResidual(nn.Module):
         active_sources = sources[-self.max_sources :]
         stacked = torch.stack(active_sources, dim=2)  # [b, s, m, d]
         keys = self.key_norm(stacked)
-        values = self.value_proj(stacked)
 
         query = self.query.to(dtype=x.dtype, device=x.device)
-        scores = torch.einsum("d,bsmd->bsm", query, keys) / (self.d_model**0.5)
+        scores = torch.einsum("d,bsmd->bsm", query, keys)
 
         if self.distance_penalty:
             # Oldest retained source receives the largest penalty.
@@ -78,5 +75,5 @@ class BlockAttentionResidual(nn.Module):
 
         weights = torch.softmax(scores, dim=-1)
         weights = self.dropout(weights)
-        readout = torch.einsum("bsm,bsmd->bsd", weights, values)
-        return self.residual_scale.abs() * self.out_proj(readout), weights
+        readout = torch.einsum("bsm,bsmd->bsd", weights, stacked)
+        return self.residual_scale.abs() * readout, weights

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from src.models import RetNetEngramModel
+from src.models import AnamnesisModel
 
 
 @dataclass
@@ -46,7 +46,7 @@ def language_modeling_loss(
 
 
 def train_step(
-    model: RetNetEngramModel,
+    model: AnamnesisModel,
     optimizer: torch.optim.Optimizer,
     batch: ToyBatch,
     grad_clip: float | None = 1.0,
@@ -64,7 +64,7 @@ def train_step(
     scalar_metrics = {
         key: float(value.detach().cpu())
         for key, value in metrics.items()
-        if isinstance(value, torch.Tensor)
+        if isinstance(value, torch.Tensor) and value.numel() == 1
     }
     scalar_metrics["loss"] = float(loss.detach().cpu())
     return loss.detach(), scalar_metrics

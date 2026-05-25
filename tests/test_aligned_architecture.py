@@ -4,7 +4,7 @@ from src.layers.attention_residual import BlockAttentionResidual
 from src.layers.engram import HashedNgramEngram
 from src.layers.milestone_gate import MilestoneRetentionGate
 from src.layers.milestone_snapshot import MilestoneSnapshotReadout
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 from src.training import make_toy_lm_batch, train_step
 
 
@@ -24,7 +24,7 @@ def test_hashed_engram_is_deterministic_and_scaled() -> None:
     residual_b, gate_b = module(hidden, input_ids)
 
     assert residual_a.shape == hidden.shape
-    assert gate_a.shape == hidden.shape
+    assert gate_a.shape == (hidden.shape[0], hidden.shape[1], 1)
     assert torch.allclose(residual_a, residual_b)
     assert torch.allclose(gate_a, gate_b)
     assert module.residual_scale.abs().item() <= 1e-4
@@ -100,8 +100,8 @@ def test_milestone_snapshot_collects_and_reads_marked_tokens() -> None:
     assert weights.shape == (2, 5, 2)
 
 
-def test_retnet_engram_model_forward_and_backward() -> None:
-    config = RetNetEngramConfig(
+def test_anamnesis_model_forward_and_backward() -> None:
+    config = AnamnesisConfig(
         vocab_size=64,
         d_model=16,
         n_heads=4,
@@ -118,7 +118,7 @@ def test_retnet_engram_model_forward_and_backward() -> None:
         milestone_ttl=4,
         use_milestone_snapshots=True,
     )
-    model = RetNetEngramModel(config)
+    model = AnamnesisModel(config)
     input_ids = torch.randint(0, 63, (2, 8))
     input_ids[:, 2] = 63
 
@@ -135,7 +135,7 @@ def test_retnet_engram_model_forward_and_backward() -> None:
 
 
 def test_token_copy_buffer_reports_alignment_diagnostics() -> None:
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=64,
         d_model=16,
         n_heads=4,
@@ -147,7 +147,7 @@ def test_token_copy_buffer_reports_alignment_diagnostics() -> None:
         use_token_copy_buffer=True,
         max_milestone_snapshots=4,
     )
-    model = RetNetEngramModel(config)
+    model = AnamnesisModel(config)
     input_ids = torch.randint(0, 63, (2, 8))
     input_ids[:, 4] = 63
 
@@ -167,7 +167,7 @@ def test_token_copy_buffer_reports_alignment_diagnostics() -> None:
 
 
 def test_synthetic_train_step_updates_model_and_reports_metrics() -> None:
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=48,
         d_model=16,
         n_heads=4,
@@ -181,7 +181,7 @@ def test_synthetic_train_step_updates_model_and_reports_metrics() -> None:
         attnres_every=2,
         milestone_token_ids=(47,),
     )
-    model = RetNetEngramModel(config)
+    model = AnamnesisModel(config)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     batch = make_toy_lm_batch(
         batch_size=2,

@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
 import torch
 import torch.nn as nn
 
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 from experiments.train_synthetic import (
     make_needle_batch,
     masked_exact_match,
@@ -37,7 +37,7 @@ from experiments.train_synthetic import (
 
 @torch.no_grad()
 def chunked_eval(
-    model: RetNetEngramModel,
+    model: AnamnesisModel,
     input_ids: torch.Tensor,
     chunk_size: int = 512,
     max_buffer_slots: int = 256,
@@ -53,7 +53,7 @@ def train_and_eval(args: argparse.Namespace) -> None:
 
     set_seed(args.seed)
 
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=args.vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -76,7 +76,7 @@ def train_and_eval(args: argparse.Namespace) -> None:
         position_encoding_type="sinusoidal",
     )
 
-    model = RetNetEngramModel(config).to(device)
+    model = AnamnesisModel(config).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model params: {n_params:,}", flush=True)
 

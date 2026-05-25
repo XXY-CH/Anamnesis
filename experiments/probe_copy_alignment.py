@@ -28,7 +28,7 @@ from experiments.train_synthetic import (
     masked_lm_loss,
     set_seed,
 )
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 
 
 @torch.no_grad()
@@ -64,8 +64,8 @@ def copy_alignment_metrics(
     }
 
 
-def build_model(args: argparse.Namespace, device: torch.device) -> RetNetEngramModel:
-    config = RetNetEngramConfig(
+def build_model(args: argparse.Namespace, device: torch.device) -> AnamnesisModel:
+    config = AnamnesisConfig(
         vocab_size=args.vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -79,10 +79,10 @@ def build_model(args: argparse.Namespace, device: torch.device) -> RetNetEngramM
         max_milestone_snapshots=args.max_snapshots,
         position_encoding_type="sinusoidal",
     )
-    return RetNetEngramModel(config).to(device)
+    return AnamnesisModel(config).to(device)
 
 
-def train(args: argparse.Namespace, model: RetNetEngramModel, device: torch.device) -> None:
+def train(args: argparse.Namespace, model: AnamnesisModel, device: torch.device) -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
     model.train()
     for step in range(1, args.train_steps + 1):
@@ -104,7 +104,7 @@ def train(args: argparse.Namespace, model: RetNetEngramModel, device: torch.devi
 
 
 @torch.no_grad()
-def evaluate(args: argparse.Namespace, model: RetNetEngramModel, device: torch.device) -> None:
+def evaluate(args: argparse.Namespace, model: AnamnesisModel, device: torch.device) -> None:
     print(
         f"{'seq_len':>8s} {'em':>6s} {'loss':>8s} {'slot_hit':>9s} "
         f"{'slot_mass':>10s} {'entropy':>8s} {'valid':>6s} {'time_s':>7s}",

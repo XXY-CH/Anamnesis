@@ -6,7 +6,7 @@ import torch
 
 from experiments.train_synthetic import build_model, build_optimizer, make_batch, run_variant
 from src.layers.milestone_snapshot import MilestoneSnapshotReadout
-from src.models import RetNetEngramModel
+from src.models import AnamnesisModel
 
 
 def _small_args(**overrides):
@@ -90,7 +90,7 @@ def test_snapshot_collection_allows_zero_budget() -> None:
 def test_snapshot_logit_bias_changes_logits_under_fixed_cache() -> None:
     args = _small_args()
     model = build_model(args, "ours_snapshot_logits", args.vocab_size)
-    assert isinstance(model, RetNetEngramModel)
+    assert isinstance(model, AnamnesisModel)
     batch = make_batch(args, torch.device("cpu"))
 
     logits_with = model(batch.input_ids)

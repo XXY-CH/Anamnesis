@@ -3,15 +3,15 @@
 import torch
 import pytest
 
-from src.models.retnet_engram import RetNetEngramConfig, RetNetEngramModel
+from src.models.anamnesis import AnamnesisConfig, AnamnesisModel
 
 
 def _make_model(
     use_copy_buffer: bool = False,
     use_snapshots: bool = False,
     milestone_tokens: tuple[int, ...] = (),
-) -> RetNetEngramModel:
-    cfg = RetNetEngramConfig(
+) -> AnamnesisModel:
+    cfg = AnamnesisConfig(
         vocab_size=32,
         d_model=64,
         n_heads=4,
@@ -27,7 +27,7 @@ def _make_model(
         milestone_token_ids=milestone_tokens,
         branch_init_scale=1e-4,
     )
-    return RetNetEngramModel(cfg)
+    return AnamnesisModel(cfg)
 
 
 @pytest.mark.parametrize(

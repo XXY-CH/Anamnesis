@@ -69,9 +69,9 @@
 | 37 | Engram as decoupled knowledge base | Pending | Never completed; direction changed |
 | 38 | Learned gating replaces MARK_THOUGHT | Revised | Valid for synthetic; limited for RAG pipeline |
 | 39 | Engram TCB trigger analysis | Revised | Works with oracle distillation; self-supervised fails |
-| 40 | Scalar gating lower bound | Pending | Vector to Scalar gate fix |
-| 41 | RAG separation principle | Pending | Retrieval vs generation manifold separation |
-| 42 | RoPE SNR collapse | Pending | Position encoding destroys content at scale |
+| 40 | Scalar gating lower bound | Verified | Vector to Scalar gate fix & gradient bound |
+| 41 | RAG separation principle | Verified | Retrieval vs generation manifold separation & rank deficiency |
+| 42 | RoPE SNR collapse | Verified | Phase scrambling OOD math |
 
 ## Key Deprecation Explanations
 

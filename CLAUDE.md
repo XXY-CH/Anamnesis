@@ -565,7 +565,7 @@ are gitignored and stay local.
 ```
 Resources/
 ├── src/                      # Core implementation (MODIFIABLE)
-│   ├── models/retnet_engram.py  # Main model — primary edit target
+│   ├── models/anamnesis.py  # Main model — primary edit target
 │   ├── models/recurrent_state.py # Fixed-size O(1) recurrent state
 │   ├── layers/               # Retention, AttnRes, Engram, Milestone layers
 │   ├── training/             # Training pipelines

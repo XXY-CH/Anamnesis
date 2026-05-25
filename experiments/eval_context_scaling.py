@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
 import torch
 import torch.nn.functional as F
 
-from src.models import RetNetEngramConfig, RetNetEngramModel
+from src.models import AnamnesisConfig, AnamnesisModel
 from src.models.recurrent_state import RecurrentState
 
 from experiments.train_synthetic import (
@@ -55,7 +55,7 @@ def make_needle_at_length(
 
 @torch.no_grad()
 def recurrent_eval_at_length(
-    model: RetNetEngramModel,
+    model: AnamnesisModel,
     seq_len: int,
     batch_size: int,
     vocab_size: int,
@@ -104,8 +104,8 @@ def recurrent_eval_at_length(
         torch.random.set_rng_state(torch_state)
 
 
-def build_config(args: argparse.Namespace) -> RetNetEngramConfig:
-    return RetNetEngramConfig(
+def build_config(args: argparse.Namespace) -> AnamnesisConfig:
+    return AnamnesisConfig(
         vocab_size=args.vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -131,7 +131,7 @@ def build_config(args: argparse.Namespace) -> RetNetEngramConfig:
 
 def train(
     args: argparse.Namespace,
-    model: RetNetEngramModel,
+    model: AnamnesisModel,
     device: torch.device,
 ) -> None:
     """Train at the base seq_len for the specified number of steps."""
@@ -220,7 +220,7 @@ def main() -> None:
     print(flush=True)
 
     config = build_config(args)
-    model = RetNetEngramModel(config).to(device)
+    model = AnamnesisModel(config).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model params: {n_params:,}", flush=True)
     print(flush=True)

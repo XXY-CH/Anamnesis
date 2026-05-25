@@ -23,8 +23,8 @@ import torch  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
 
 from src.models import (
-    RetNetEngramConfig,
-    RetNetEngramModel,
+    AnamnesisConfig,
+    AnamnesisModel,
     TransformerConfig,
     TransformerLM,
 )  # noqa: E402
@@ -315,7 +315,7 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         variant == "ours" and args.use_snapshot_logit_bias
     )
 
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         **common,
         engram_layers=(args.engram_layer,) if uses_full_arch else (),
         engram_num_slots=args.engram_slots,
@@ -341,14 +341,14 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         use_learned_gate=bool(getattr(args, "use_learned_gate", False)),
         use_engram_tcb_trigger=bool(getattr(args, "use_engram_tcb_trigger", False)),
     )
-    model = RetNetEngramModel(config)
+    model = AnamnesisModel(config)
     override_retention_gamma(model, args.retention_gamma)
     return model
 
 
 def build_optimizer(args: argparse.Namespace, model: torch.nn.Module) -> torch.optim.Optimizer:
     """Build either a plain AdamW optimizer or branch-aware parameter groups."""
-    if not args.use_branch_optimizer or not isinstance(model, RetNetEngramModel):
+    if not args.use_branch_optimizer or not isinstance(model, AnamnesisModel):
         return torch.optim.AdamW(
             model.parameters(),
             lr=args.learning_rate,
@@ -442,7 +442,7 @@ def evaluate_model(
         for _ in range(args.eval_batches):
             batch = make_batch(args, device, split=args.eval_split)
             model_kwargs = {"return_metrics": True}
-            if isinstance(model, RetNetEngramModel):
+            if isinstance(model, AnamnesisModel):
                 drop_modules = drop_modules or set()
                 model_kwargs.update(
                     {
@@ -473,7 +473,7 @@ def evaluate_model(
 @torch.no_grad()
 def evaluate_model_recurrent(
     args: argparse.Namespace,
-    model: RetNetEngramModel,
+    model: AnamnesisModel,
     device: torch.device,
     step: int,
 ) -> dict[str, float]:
@@ -541,7 +541,7 @@ def run_variant(
     for step in range(1, args.steps + 1):
         batch = make_batch(args, device, split="train")
         optimizer.zero_grad(set_to_none=True)
-        if getattr(args, "gradient_checkpointing", False) and isinstance(model, RetNetEngramModel):
+        if getattr(args, "gradient_checkpointing", False) and isinstance(model, AnamnesisModel):
             logits = model.forward_chunked(
                 batch.input_ids,
                 chunk_size=getattr(args, "chunk_size", 512),
@@ -584,7 +584,7 @@ def run_variant(
                     row[f"eval_no_{module_name}_{key.removeprefix('eval_')}"] = value
             if (
                 getattr(args, "eval_recurrent", False)
-                and isinstance(model, RetNetEngramModel)
+                and isinstance(model, AnamnesisModel)
                 and "eval_loss" in row
             ):
                 recurrent = evaluate_model_recurrent(args, model, device, step)

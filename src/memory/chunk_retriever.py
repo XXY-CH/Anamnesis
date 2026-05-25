@@ -115,7 +115,7 @@ def compute_chunk_embeddings(
     """Process a long sequence in chunks and return per-chunk embeddings.
 
     Args:
-        model: RetNetEngramModel (frozen).
+        model: AnamnesisModel (frozen).
         input_ids: [batch=1, seq_len] token IDs.
         chunk_size: size of each chunk.
         pool_method: "mean", "max", or "meanmax" (concatenated).

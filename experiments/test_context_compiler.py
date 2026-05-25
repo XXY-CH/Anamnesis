@@ -23,7 +23,7 @@ import torch
 import torch.nn.functional as F
 
 from src.memory import ContextCompiler, CompiledMemory, MemoryQueryHead
-from src.models import RetNetEngramModel, RetNetEngramConfig
+from src.models import AnamnesisModel, AnamnesisConfig
 from experiments.train_synthetic import (
     make_needle_batch,
     masked_lm_loss,
@@ -217,7 +217,7 @@ def main():
 
     set_seed(args.seed)
 
-    config = RetNetEngramConfig(
+    config = AnamnesisConfig(
         vocab_size=args.vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -227,7 +227,7 @@ def main():
         use_token_copy_buffer=True,
         milestone_token_ids=(MARK_THOUGHT,),
     )
-    model = RetNetEngramModel(config).to(device)
+    model = AnamnesisModel(config).to(device)
     print(f"Model params: {sum(p.numel() for p in model.parameters()):,}")
 
     # Phase 1: Train on short context

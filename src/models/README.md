@@ -4,7 +4,7 @@ This folder contains full language model assemblies.
 
 ## Files
 
-- `retnet_engram.py` - Dense RetNet + Engram + Block AttnRes model with optional
+- `anamnesis.py` - Dense RetNet + Engram + Block AttnRes model with optional
   milestone snapshots.
 - `transformer_baseline.py` - Compact Transformer language model baseline.
 

@@ -11,7 +11,7 @@ workspace.
 
 - Existing project skeleton includes `src/layers/retention.py`,
   `src/layers/engram.py`, `src/layers/attention_residual.py`, and
-  `src/models/retnet_engram.py`.
+  `src/models/anamnesis.py`.
 - Existing notes are high-level and do not yet contain a formal proof trail.
 - The directory is not currently a git repository, so durable trace is file-based
   rather than commit-based.
@@ -232,7 +232,7 @@ Proof continuation:
   `EngramGate` and generic residual wrappers with a small aligned training
   architecture:
   `RetentionLayer` with optional milestone gates, `HashedNgramEngram`,
-  `BlockAttentionResidual`, `RetNetEngramModel`, and a synthetic LM training
+  `BlockAttentionResidual`, `AnamnesisModel`, and a synthetic LM training
   step.
 - Added tests for deterministic Engram lookup, depth-axis AttnRes readout,
   milestone gate windows, model forward/backward, and one toy optimizer step.
@@ -255,7 +255,7 @@ Proof continuation:
   current milestone gating slows decay but does not provide an explicit
   queryable snapshot/work-memory readout.
 - Added `src/layers/milestone_snapshot.py` and integrated optional
-  `MilestoneSnapshotReadout` into `src/models/retnet_engram.py`. The snapshot
+  `MilestoneSnapshotReadout` into `src/models/anamnesis.py`. The snapshot
   branch stores bounded token-time hidden vectors adjacent to milestone markers
   and can optionally add a final snapshot-derived logit bias.
 - Ran the high-entropy 512-token needle stress test again with

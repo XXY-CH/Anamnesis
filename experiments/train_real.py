@@ -16,8 +16,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
-from src.models import RetNetEngramModel
-from src.models.retnet_engram import RetNetEngramConfig
+from src.models import AnamnesisModel
+from src.models.anamnesis import AnamnesisConfig
 
 CACHE_DIR = Path("experiments/data")
 
@@ -169,8 +169,8 @@ def _load_tinystories(split: str, max_chars: int | None = None) -> str:
 # Model construction
 # ---------------------------------------------------------------------------
 
-def build_model(args: argparse.Namespace, vocab_size: int) -> RetNetEngramModel:
-    config = RetNetEngramConfig(
+def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel:
+    config = AnamnesisConfig(
         vocab_size=vocab_size,
         d_model=args.d_model,
         n_heads=args.n_heads,
@@ -191,7 +191,7 @@ def build_model(args: argparse.Namespace, vocab_size: int) -> RetNetEngramModel:
         engram_max_ngram=args.engram_max_ngram,
         engram_hash_heads=args.engram_hash_heads,
     )
-    return RetNetEngramModel(config)
+    return AnamnesisModel(config)
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ def build_model(args: argparse.Namespace, vocab_size: int) -> RetNetEngramModel:
 
 @torch.no_grad()
 def evaluate(
-    model: RetNetEngramModel,
+    model: AnamnesisModel,
     loader: DataLoader,
     device: torch.device,
     max_batches: int | None = None,

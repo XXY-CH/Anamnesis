@@ -1,7 +1,7 @@
 # Dense RetNet + Block AttnRes + Hashed Engram Baseline
 
 experiment:
-  name: retnet_engram_baseline
+  name: anamnesis_baseline
   description: "Dense RetNet with Kimi-style Block AttnRes and deterministic hashed Engram"
   seed: 42
 
@@ -43,7 +43,7 @@ logging:
   log_interval: 100
   eval_interval: 1000
   save_interval: 5000
-  wandb_project: "engram-retention"
+  wandb_project: "Anamnesis"
   wandb_entity: null
 
 instrumentation:

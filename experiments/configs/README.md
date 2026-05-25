@@ -4,7 +4,7 @@ This folder stores YAML configurations for reproducible experiment runs.
 
 ## Files
 
-- `retnet_engram_baseline.yaml` - Dense RetNet + Block AttnRes + hashed Engram
+- `anamnesis_baseline.yaml` - Dense RetNet + Block AttnRes + hashed Engram
   baseline configuration.
 
 Keep configs declarative. If a config depends on local data, hardware, or
