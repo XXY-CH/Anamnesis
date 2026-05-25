@@ -36,6 +36,44 @@ SHAKESPEARE_URL = "https://raw.githubusercontent.com/karpathy/char-rnn/master/da
 # Tokenizer
 # ---------------------------------------------------------------------------
 
+class WordTokenizer:
+    """Simple whitespace tokenizer for semantic-level tokenization."""
+
+    def __init__(self, text: str) -> None:
+        import re
+        words = sorted(set(re.findall(r"\S+", text.lower())))
+        self.vocab = SPECIAL_TOKENS + words
+        self.stoi = {w: i for i, w in enumerate(self.vocab)}
+        self.itos = {i: w for i, w in enumerate(self.vocab)}
+        self.pad_id = self.stoi["<pad>"]
+        self.eos_id = self.stoi["<eos>"]
+
+    @property
+    def vocab_size(self) -> int:
+        return len(self.vocab)
+
+    def encode(self, text: str) -> list[int]:
+        import re
+        return [self.stoi.get(w, self.pad_id) for w in re.findall(r"\S+", text.lower())]
+
+    def decode(self, ids: list[int]) -> str:
+        return " ".join(self.itos.get(i, "") for i in ids)
+
+    def save(self, path: Path) -> None:
+        path.write_text(json.dumps(self.vocab), encoding="utf-8")
+
+    @classmethod
+    def load(cls, path: Path) -> WordTokenizer:
+        vocab = json.loads(path.read_text(encoding="utf-8"))
+        tok = cls.__new__(cls)
+        tok.vocab = vocab
+        tok.stoi = {w: i for i, w in enumerate(vocab)}
+        tok.itos = {i: w for i, w in enumerate(vocab)}
+        tok.pad_id = tok.stoi["<pad>"]
+        tok.eos_id = tok.stoi["<eos>"]
+        return tok
+
+
 class CharTokenizer:
     """Minimal character-level tokenizer."""
 
@@ -244,7 +282,7 @@ def train(args: argparse.Namespace) -> None:
     train_text = load_dataset(args.dataset, "train", args.max_train_chars)
     valid_text = load_dataset(args.dataset, "valid", args.max_valid_chars)
 
-    tokenizer = CharTokenizer(train_text)
+    tokenizer = WordTokenizer(train_text) if args.tokenizer == "word" else CharTokenizer(train_text)
     tok_path = Path(args.output_dir) / "tokenizer.json"
     tok_path.parent.mkdir(parents=True, exist_ok=True)
     tokenizer.save(tok_path)
@@ -370,6 +408,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Real-data LM training")
 
     p.add_argument("--model-type", choices=["anamnesis", "transformer"], default="anamnesis")
+    p.add_argument("--tokenizer", choices=["char", "word"], default="char")
     p.add_argument("--dataset", choices=["tinystories", "shakespeare"], default="tinystories")
     p.add_argument("--max-train-chars", type=int, default=10_000_000)
     p.add_argument("--max-valid-chars", type=int, default=500_000)

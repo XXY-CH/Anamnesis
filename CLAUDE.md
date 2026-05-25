@@ -549,6 +549,27 @@ enabling the retriever to distinguish between 2048 random-text chunks. The scala
 learns to inject useful features from the N-gram hash lookup without distorting the
 semantic manifold (Proof 40).
 
+### Phase 5.1: Word-Level Tokenization + RAG on Real Data
+
+**Word-level TinyStories** (vocab=10,562, seq_len=256 words, 2000 steps):
+
+| Model | val_ppl |
+|-------|---------|
+| **Anamnesis (Engram)** | **99.01** |
+| Bare RetNet | 102.40 |
+
+Engram advantage confirmed at word-level (+3.3%).
+
+**RAG evaluation** (word-level, 128-word chunks):
+- Baseline: PPL=126.16
+- RAG (+ retrieved): PPL=130.32 (-0.7%)
+- Oracle (+ preceding): PPL=126.07 (+0.0%)
+
+**Conclusion**: RAG does NOT improve standard LM PPL, even with word-level tokens.
+LM predicts from local context — distant text adds no information.
+RAG is validated for retrieval tasks (EM=1.000@1M) but is orthogonal to LM quality.
+Engram helps LM directly; RAG helps retrieval tasks. They serve different purposes.
+
 **Key finding**: Scalar-gated Engram improves LM PPL by 22%. This validates Proof 40's
 prediction that initial perturbation is O(s·e^b) ≈ 10⁻⁵ (negligible). The Engram's static
 hash tables provide useful prior knowledge for character-level language modeling.
