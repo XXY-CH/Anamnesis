@@ -313,6 +313,8 @@ def main():
     parser.add_argument("--curriculum", action="store_true", default=False)
     parser.add_argument("--use-learned-gate", action="store_true", default=False)
     parser.add_argument("--use-engram-tcb-trigger", action="store_true", default=False)
+    parser.add_argument("--use-engram", action="store_true", default=False,
+                        help="Enable Engram layer in model (improves chunk embeddings)")
     parser.add_argument("--use-chunk-rope", action="store_true", default=False)
     parser.add_argument("--proj-dim", type=int, default=None,
                         help="Projection dimension for chunk retriever (default: d_model).")
@@ -340,7 +342,7 @@ def main():
         n_heads=args.n_heads,
         n_layers=args.n_layers,
         max_seq_len=args.train_seq_len,
-        engram_layers=(2,) if args.use_engram_tcb_trigger else (),
+        engram_layers=(2,) if (args.use_engram or args.use_engram_tcb_trigger) else (),
         use_token_copy_buffer=True,
         use_learned_gate=args.use_learned_gate,
         use_engram_tcb_trigger=args.use_engram_tcb_trigger,
