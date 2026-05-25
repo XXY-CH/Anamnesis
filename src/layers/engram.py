@@ -48,8 +48,8 @@ class HashedNgramEngram(nn.Module):
         self.hidden_norm = nn.RMSNorm(d_model)
         self.memory_norm = nn.RMSNorm(d_model)
         self.value_proj = nn.Linear(d_model, d_model, bias=False)
-        self.gate_proj = nn.Linear(d_model * 2, d_model)
-        nn.init.constant_(self.gate_proj.bias, gate_bias)
+        self.key_proj = nn.Linear(d_model, d_model, bias=False)
+        self.gate_bias = nn.Parameter(torch.tensor(float(gate_bias)))
         self.dropout = nn.Dropout(dropout)
         self.residual_scale = nn.Parameter(torch.tensor(float(init_scale)))
 
@@ -139,7 +139,8 @@ class HashedNgramEngram(nn.Module):
 
         norm_hidden = self.hidden_norm(hidden)
         norm_memory = self.memory_norm(memory)
-        gate = torch.sigmoid(self.gate_proj(torch.cat([norm_hidden, norm_memory], dim=-1)))
+        score = (norm_hidden * self.key_proj(norm_memory)).sum(dim=-1, keepdim=True) / (self.d_model ** 0.5)
+        gate = torch.sigmoid(score + self.gate_bias)
         value = self.value_proj(norm_memory)
         residual = self.residual_scale.abs() * self.dropout(gate * value)
         return residual, gate
