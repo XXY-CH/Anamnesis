@@ -315,6 +315,8 @@ def main():
     parser.add_argument("--use-engram-tcb-trigger", action="store_true", default=False)
     parser.add_argument("--use-engram", action="store_true", default=False,
                         help="Enable Engram layer in model (improves chunk embeddings)")
+    parser.add_argument("--attnres-every", type=int, default=0,
+                        help="Enable AttnRes every N layers (0=disabled)")
     parser.add_argument("--use-chunk-rope", action="store_true", default=False)
     parser.add_argument("--proj-dim", type=int, default=None,
                         help="Projection dimension for chunk retriever (default: d_model).")
@@ -349,6 +351,7 @@ def main():
         milestone_token_ids=(MARK_THOUGHT,),
         token_copy_sinusoidal_pos=True,
         position_encoding_type="sinusoidal",
+        attnres_every=args.attnres_every,
     )
     model = AnamnesisModel(config).to(device)
     n_params = sum(p.numel() for p in model.parameters())
