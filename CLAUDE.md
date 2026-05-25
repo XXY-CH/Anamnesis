@@ -507,6 +507,25 @@ the model to have learned TCB-based copying, which conflicts with LM training.
 
 **AttnRes verdict**: Neutral on real LM (7.72 vs 7.59 without). Kept optional, disabled for LM.
 
+**Three-way comparison** (d=128, Shakespeare char-level LM, 2000 steps):
+
+| Model | val_ppl@512 | val_ppl@1024 |
+|-------|-------------|--------------|
+| **Anamnesis (Engram)** | **7.59** | 8.51 |
+| Bare RetNet | 9.78 | — |
+| Transformer | 9.78 | — |
+
+Anamnesis wins by 22% on LM quality. RetNet and Transformer converge to identical PPL.
+
+**RAG evaluation on real data**: RAG doesn't help character-level Shakespeare LM (oracle
+improvement only +0.4%). Char-level LM is a local task — next char depends on ~20 chars,
+not distant retrieved text. RAG pipeline is validated on synthetic needle task (EM=0.875@1M)
+but char-level LM is not the right evaluation for retrieval. Needs QA or semantic tasks.
+
+**RAG + chunkwise forward**: 512-trained model with chunkwise to 1024 tokens crashes PPL
+(7.36→15.16). Model must be trained at target length to utilize cross-chunk info.
+1024-trained model handles 1024 tokens correctly (no crash).
+
 **Key finding**: Scalar-gated Engram improves LM PPL by 22%. This validates Proof 40's
 prediction that initial perturbation is O(s·e^b) ≈ 10⁻⁵ (negligible). The Engram's static
 hash tables provide useful prior knowledge for character-level language modeling.
