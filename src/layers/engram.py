@@ -30,6 +30,7 @@ class HashedNgramEngram(nn.Module):
         dropout: float = 0.0,
         table_device: str | torch.device | None = None,
         use_conv: bool = True,
+        vector_gate: bool = False,
     ) -> None:
         super().__init__()
         self.vocab_size = vocab_size
@@ -39,6 +40,7 @@ class HashedNgramEngram(nn.Module):
         self.num_hash_heads = num_hash_heads
         self.table_device = torch.device(table_device) if table_device is not None else None
         self.use_conv = use_conv
+        self.vector_gate = vector_gate
 
         self.tables = nn.ModuleList(
             [nn.Embedding(num_slots, d_model) for _ in range(max_ngram * num_hash_heads)]
@@ -157,7 +159,10 @@ class HashedNgramEngram(nn.Module):
         key = self.key_proj(memory)
         norm_key = self.key_norm(key)
 
-        score = (norm_hidden * norm_key).sum(dim=-1, keepdim=True) / (self.d_model ** 0.5)
+        if self.vector_gate:
+            score = (norm_hidden * norm_key) / (self.d_model ** 0.5)
+        else:
+            score = (norm_hidden * norm_key).sum(dim=-1, keepdim=True) / (self.d_model ** 0.5)
         gate = torch.sigmoid(score + self.gate_bias)
 
         value = self.value_proj(memory)

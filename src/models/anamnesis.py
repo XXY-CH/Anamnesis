@@ -41,6 +41,7 @@ class AnamnesisConfig:
     engram_hash_heads: int = 4
     engram_table_device: str | None = None
     engram_use_conv: bool = True
+    engram_vector_gate: bool = False
     attnres_every: int = 4
     attnres_max_sources: int = 8
     attnres_distance_penalty: float = 0.0
@@ -125,6 +126,7 @@ class AnamnesisLayer(nn.Module):
                 dropout=config.dropout,
                 table_device=config.engram_table_device,
                 use_conv=config.engram_use_conv,
+                vector_gate=config.engram_vector_gate,
             )
             if use_engram
             else None
