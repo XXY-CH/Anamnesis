@@ -583,6 +583,18 @@ Engram helps LM directly; RAG helps retrieval tasks. They serve different purpos
 Engram advantage scales with model size. Both models improve at d=256 but Anamnesis
 maintains a clear 17% lead. Shakespeare is data-limited (~1.1M chars), capping gains.
 
+### Phase 5.3: AttnRes Validation on Retrieval Pipeline
+
+**Scaling with Engram + AttnRes** (d=64, proj_dim=256, seed=42):
+
+| Length | Engram only | Engram + AttnRes | Delta |
+|--------|------------|------------------|-------|
+| 1M | 1.000 | 1.000 | 0 |
+
+AttnRes is **neutral** on both LM (PPL) and retrieval (EM). Adds computation with no
+benefit. Retained as optional for potential use in very deep models or special tasks,
+but disabled by default.
+
 **Key finding**: Scalar-gated Engram improves LM PPL by 22%. This validates Proof 40's
 prediction that initial perturbation is O(s·e^b) ≈ 10⁻⁵ (negligible). The Engram's static
 hash tables provide useful prior knowledge for character-level language modeling.
