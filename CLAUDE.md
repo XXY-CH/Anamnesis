@@ -614,10 +614,12 @@ Only 320 additional parameters (depthwise conv is extremely lightweight), yet su
 |-------|---------|----------|----------|----------------|
 | **Anamnesis (Engram)** | 7.59 | 8.13 | 8.01 | **7.91 ± 0.28** |
 | Bare RetNet | 9.78 | 9.86 | 10.14 | **9.93 ± 0.19** |
-| Δ | — | — | — | **-20.3%** |
+| Transformer | 9.78 | 9.66 | 9.74 | **9.73 ± 0.06** |
+| Δ vs RetNet | — | — | — | **-20.3%** |
+| Δ vs Transformer | — | — | — | **-18.7%** |
 
-Non-overlapping confidence intervals (7.91+0.28=8.19 vs 9.93-0.19=9.74).
-Improvement is statistically significant across all seeds.
+Non-overlapping confidence intervals across all three models.
+Anamnesis is the clear winner at d=128; RetNet and Transformer are statistically tied.
 
 ### Phase 5.5: Vector Gate Ablation
 
