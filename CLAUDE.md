@@ -570,20 +570,43 @@ LM predicts from local context — distant text adds no information.
 RAG is validated for retrieval tasks (EM=1.000@1M) but is orthogonal to LM quality.
 Engram helps LM directly; RAG helps retrieval tasks. They serve different purposes.
 
-### Phase 5.2: Scaling Validation (d=256)
+### Phase 5.2: Scaling Validation (Full Curve)
 
-**Shakespeare char-level LM at d=256** (8 heads, 8 layers, 2000 steps):
+**Shakespeare char-level LM** (8 heads, 8 layers, 2000 steps, sinusoidal PE):
 
-| Model | d=128 | d=256 | Scaling Δ |
-|-------|-------|-------|-----------|
-| **Anamnesis (Engram)** | **7.59** | **7.53** | -0.8% |
-| Bare RetNet | 9.78 | 9.03 | -7.7% |
-| Engram advantage | -22% | **-17%** | persistent |
+| Model | d=64 | d=128 | d=256 | d=64→256 Δ |
+|-------|------|-------|-------|------------|
+| **Anamnesis (Engram)** | **8.53** | **7.59** | 7.53 | -12% |
+| Bare RetNet | 11.15 | 9.78 | 9.03 | -19% |
+| Transformer | 12.39 | 9.78 | **5.71** | -54% |
 
-Engram advantage scales with model size. Both models improve at d=256 but Anamnesis
-maintains a clear 17% lead. Shakespeare is data-limited (~1.1M chars), capping gains.
+Key observations:
+- **Anamnesis wins at d=64 and d=128** (23% and 22% better than RetNet respectively).
+- **Transformer wins at d=256** (5.71 vs 7.53, 24% better than Anamnesis).
+- Transformer scales dramatically better: 54% PPL improvement from d=64→d=256, vs 12% for Anamnesis.
+- Engram hash tables provide the most value at small model sizes, compensating for limited capacity.
+- At d=256, full attention's quadratic context window dominates — RetNet's O(1) recurrence
+  trades expressivity for efficiency, and the gap widens with model size.
+- **Implication**: Anamnesis is the right choice for resource-constrained/small models;
+  Transformer remains superior when compute budget allows d≥256.
 
-### Phase 5.3: AttnRes Validation on Retrieval Pipeline
+### Phase 5.3: Conv1D Ablation
+
+**Shakespeare char-level LM, d=128** (8 layers, 2000 steps, sinusoidal PE):
+
+| Config | val_ppl | Δ vs no-conv |
+|--------|---------|-------------|
+| **Engram + Conv1D** | **7.59** | baseline |
+| Engram, no Conv1D | 8.79 | +15.8% worse |
+
+Conv1D provides **13.7% PPL improvement**. The causal depthwise convolution (kernel=4, dilation=3, groups=d_model)
+adds local positional context after the hash lookup. Without it, the Engram's hash-based retrieval is
+purely position-independent — it cannot distinguish between the same n-gram at different positions.
+Conv1D's receptive field (9 tokens) gives the gated output awareness of local neighborhood.
+
+Only 320 additional parameters (depthwise conv is extremely lightweight), yet substantial quality gain.
+
+### Phase 5.4: AttnRes Validation on Retrieval Pipeline
 
 **Scaling with Engram + AttnRes** (d=64, proj_dim=256, seed=42):
 
@@ -595,7 +618,7 @@ AttnRes is **neutral** on both LM (PPL) and retrieval (EM). Adds computation wit
 benefit. Retained as optional for potential use in very deep models or special tasks,
 but disabled by default.
 
-### Phase 5.4: Multi-Hop Retrieval (Planned)
+### Phase 5.5: Multi-Hop Retrieval (Planned)
 
 Requires new implementation: multi-needle data generation, multi-label retriever training,
 top-K retrieval, and evaluation of multi-hop reasoning over retrieved chunks.
