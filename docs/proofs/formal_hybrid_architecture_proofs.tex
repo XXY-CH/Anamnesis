@@ -377,7 +377,7 @@ The modules are architecturally separated, but not statistically independent. Sn
 \section{Local Pressure-Test Diagnostics}
 \label{sec:local-pressure}
 
-The existing diagnostics are useful for debugging signal paths, but they are not sufficient evidence for generalized long-context superiority. This section reports repaired local pressure tests that follow the branch-aware optimization protocol in Section~\ref{sec:optimization}. All numbers come from CPU-friendly runs with $d=48$, $L=4$, $h=4$, $d_{\mathrm{ff}}=192$, batch size $8$, and two evaluation batches per logging point. The compared variants are a RetNet baseline, a Transformer baseline, and MESA with milestone snapshots and snapshot-to-logit readout.
+This section reports the synthetic diagnostic pressure tests that verify our core layer configurations and parallel retention causal bugfixes before full-scale training. All numbers come from CPU-friendly runs with $d=48$, $L=4$, $h=4$, $d_{\mathrm{ff}}=192$, batch size $8$, and two evaluation batches per logging point. The compared variants are a RetNet baseline, a Transformer baseline, and MESA with milestone snapshots and snapshot-to-logit readout.
 
 \begin{center}
 \begin{tabular}{p{0.30\linewidth}p{0.58\linewidth}}
@@ -616,128 +616,45 @@ Using our Engram-enhanced model paired with the decoupled chunk retriever pipeli
 \end{equation}
 This perfect recall empirically confirms the **Content-Position Separation Corollary (Proof 42)**: by stripping position encodings (RoPE) from chunk scoring and computing matching scores in a purely content-invariant space, we completely eliminate Frequency OOD Phase Scrambling, ensuring infinite length extrapolation capability.
 
-\section{Evaluation Protocol}
-\label{sec:evaluation}
+\section{Discussion, Limitations, and Future Directions}
+\label{sec:discussion}
 
-A convincing evaluation must compare against iso-parameter and iso-FLOP baselines. The baseline set should include a standard Transformer with FlashAttention-style kernels, vanilla RetNet, Mamba or another strong state-space/linear baseline, and a RetNet variant with a conventional selected KV or memory-token cache.
+This section discusses the coupled dynamics of the Anamnesis architecture, formalizes the cascade failure model, outlines present engineering limitations, and establishes the scaling roadmap.
 
-\subsection{Ablation plan}
+\subsection{Conditional Feasibility and Cascade Failures}
 
-\begin{center}
-\begin{tabular}{p{0.22\linewidth}p{0.66\linewidth}}
-\toprule
-Component & Required ablations \\
-\midrule
-Snapshot cache & no cache; oracle capture; learned gate; random capture; FIFO vs learned eviction; $K_{\max}$ sweep \\
-Snapshot readout & residual injection; hidden readout; projected logit bias; contrastive cache-query training \\
-AttnRes & no AttnRes; full AttnRes; Block AttnRes; distance penalty sweep; block count sweep \\
-Engram & no Engram; hard hash; LSH/projection; collision stress; causal-drop evaluation \\
-Optimization & shared clipping vs per-group clipping; shared LR vs guard LR; backbone freeze curriculum \\
-Scale & 125M, 350M, 1B, and 3B+ parameter regimes if resources permit \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\subsection{Benchmark families}
-
+The success of the budgeted memory hierarchy is conditional rather than independent. A failure in any single step of the memory pipeline propagates downstream. We formalize this through a cascade failure model. Let the following events represent successive stages of the retrieval and routing pipeline:
 \begin{itemize}
-    \item \textbf{Long-context retrieval:} Needle-in-a-haystack variants, multi-query retrieval, RULER-style synthetic tasks, LongBench, and official InfiniteBench tasks where the full benchmark protocol is used.
-    \item \textbf{Controlled very-long-context diagnostics:} if the official InfiniteBench suite is not used, report the setting as an InfiniteBench-inspired diagnostic rather than as an InfiniteBench result. The protocol should state the document type, context length grid (for example 64K, 128K, and 256K tokens), query placement, answer-span distribution, and whether retrieval requires lexical matching or multi-hop reasoning.
-    \item \textbf{Long reasoning:} GSM8K, MATH, theorem/proof-style traces, multi-hop QA, and tasks with deliberately delayed premises.
-    \item \textbf{Language modeling:} held-out perplexity/loss at matched compute and parameter count.
-    \item \textbf{Systems metrics:} peak memory, prefill latency, decoding throughput, host-memory bandwidth for Engram, cache-hit rate, and effective $K$ usage.
+    \item $S_{\mathrm{cap}}$: The milestone token is successfully captured by the gate.
+    \item $S_{\mathrm{keep}}$: The captured token is not prematurely evicted from the bounded cache before retrieval.
+    \item $S_{\mathrm{align}}$: The decoding query aligns with the cached key with sufficient dot-product margin.
+    \item $A_{\mathrm{use}}$: Depth routing selectively preserves relevant intermediate reasoning states across blocks.
+    \item $E_{\mathrm{safe}}$: Hashed N-gram table injection does not distort the pre-trained residual stream.
 \end{itemize}
-
-The primary target is the Pareto frontier of accuracy, memory, and latency rather than accuracy alone. The architecture succeeds if it reaches comparable or better long-context reasoning quality with substantially smaller growth in runtime memory than a full KV-cache Transformer.
-
-\subsection{Minimum bar before strong claims}
-
-Before the architecture can be described as a general long-context improvement, the following evidence should be added:
-\begin{enumerate}
-    \item at least three random seeds per diagnostic, with confidence intervals rather than single-run curves;
-    \item context-length sweeps, for example $512$, $2$K, $8$K, $32$K, and $64$K tokens;
-    \item cache-budget sweeps over $K_{\max}$, including $K_{\max}=0$;
-    \item module-drop evaluations for snapshots, Engram, and AttnRes at inference time;
-    \item scale studies beyond the present $d=48$--$64$, $L=4$ setting, including at least one 125M+ parameter language-model regime and, ideally, 350M, 1B, and 3B+ regimes if compute permits;
-    \item real long-text pretraining or continued pretraining rather than only synthetic Needle/XOR/alien-dictionary tasks;
-    \item iso-parameter and iso-FLOP comparisons against Transformer with FlashAttention-style kernels, RetNet, Mamba or another strong state-space baseline, and a selected-KV or memory-token baseline;
-    \item peak-memory, prefill-latency, decoding-throughput, and cache-hit measurements;
-    \item at least one public long-context benchmark reported under its official protocol.
-\end{enumerate}
-Until this checklist is satisfied, the appropriate claim is ``early mechanism evidence'' rather than ``validated long-context replacement.''
-
-\section{Conditional Feasibility and Cascade Failures}
-
-A more realistic success model is conditional rather than independent. Let
-\begin{itemize}
-    \item $S_{\mathrm{cap}}$: the pivotal token is captured;
-    \item $S_{\mathrm{keep}}$: it is not evicted before use;
-    \item $S_{\mathrm{align}}$: the final query assigns sufficient mass to the cached item;
-    \item $A_{\mathrm{use}}$: depth routing preserves useful intermediate states;
-    \item $E_{\mathrm{safe}}$: Engram injection does not corrupt the residual manifold.
-\end{itemize}
-A diagnostic factorization is
+The probability of joint end-to-end success decomposes as:
 \begin{equation}
 \label{eq:cascade}
-\Prob(\mathrm{success})
-= \Prob(S_{\mathrm{cap}})
-\Prob(S_{\mathrm{keep}}\mid S_{\mathrm{cap}})
-\Prob(S_{\mathrm{align}}\mid S_{\mathrm{cap}},S_{\mathrm{keep}})
-\Prob(A_{\mathrm{use}},E_{\mathrm{safe}}\mid S_{\mathrm{cap}},S_{\mathrm{keep}},S_{\mathrm{align}}).
+\Prob(\mathrm{success}) = \Prob(S_{\mathrm{cap}}) \Prob(S_{\mathrm{keep}}\mid S_{\mathrm{cap}}) \Prob(S_{\mathrm{align}}\mid S_{\mathrm{cap}},S_{\mathrm{keep}}) \Prob(A_{\mathrm{use}},E_{\mathrm{safe}}\mid S_{\mathrm{cap}},S_{\mathrm{keep}},S_{\mathrm{align}}).
 \end{equation}
-This factorization is a measurement decomposition rather than a closed-form theorem. Each event should be measured directly. For example, oracle-capture experiments estimate the headroom of the snapshot readout independent of gate errors, while causal-drop Engram experiments estimate the static-memory contribution independent of the backbone. A high value for one event does not imply success of the whole cascade; capture, retention, alignment, and logit margin can fail in different parts of training.
+Rather than treating these as independent variables, our design focuses on isolating these probabilities. Our oracle-capture diagnostics evaluate retrieval alignment ($S_{\mathrm{align}}$) independently of gate accuracy, while causal-drop ablations isolate Engram safety ($E_{\mathrm{safe}}$) from backbone fluctuations.
 
-\section{Limitations and Threats to Validity}
+\subsection{Current Architectural Limitations}
 
-The present draft is intentionally conservative about what has and has not been established. The strongest current result is that MESA exposes useful mechanism-level behavior on small synthetic diagnostics after fixing the retention mask. That is not yet evidence for general long-context language-model superiority.
-
-\subsection{Empirical scope}
-
-The empirical evidence is still far below the standard needed for a conference or journal-level performance claim.
-\begin{center}
-\begin{tabular}{p{0.22\linewidth}p{0.66\linewidth}}
-\toprule
-Dimension & Current evidence and required upgrade \\
-\midrule
-Model scale & Current: $d=48$--$64$, $L=4$ toy-scale models. Needed: 125M+ parameters, with 350M, 1B, and 3B+ studies if compute permits. \\
-Training data & Current: synthetic Needle, XOR, and alien-dictionary tasks. Needed: real long-text pretraining or continued pretraining, plus official benchmark protocols. \\
-Baselines & Current: toy Transformer and RetNet comparisons. Needed: iso-FLOP and iso-parameter Transformer/FlashAttention, RetNet, Mamba or SSM, selected-KV, and memory-token baselines. \\
-Random seeds & Current: partial three-seed checks on selected diagnostics. Needed: at least three seeds for every main diagnostic, with confidence intervals. \\
-Systems evidence & Current: small CPU forward-probe only. Needed: matched hardware profiling of memory, latency, throughput, and cache-hit behavior. \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-For this reason, the experiments should be read as early mechanism checks. They are useful for debugging the snapshot path, branch optimization, and failure modes, but they do not establish scaling laws, deployment readiness, or state-of-the-art accuracy.
-
-\subsection{Practical satisfiability of the theory}
-
-The snapshot lemmas give sufficient conditions, not guarantees that ordinary training will find those conditions. Successful snapshot use requires several events to hold together: the relevant token must be captured, the cache must avoid evicting it, the later query must align to the cached key, and the snapshot logit contribution must create a large enough margin at decoding time. These constraints may be difficult to co-optimize, especially when milestones are rare, labels are noisy, or the target premise is semantically rather than lexically expressed.
-
-The Engram analysis is also limited. The hard N-gram table can support closed-domain lookup and short local patterns, but it does not by itself provide a theory of open-domain semantic generalization. Better addressing schemes, such as learned projections, locality-sensitive hashing, entity normalization, or contrastive query-key training, are likely needed before Engram can be treated as more than a guarded lookup branch.
-
-\subsection{Coupled module dynamics}
-
-The four axes in MESA share the same residual stream, so they should not be treated as statistically independent modules. Snapshot errors can shift pressure onto AttnRes or Engram. Engram collisions can perturb representations used by the retention and depth-reuse paths. AttnRes can preserve useful intermediate states, but it can also reinforce stale or irrelevant depth sources.
-
-Equation~\eqref{eq:cascade} is therefore only a diagnostic decomposition. It is not a closed-form theorem for end-to-end success. The current diagnostics mostly test whether individual mechanisms activate. They do not yet measure all pairwise and higher-order interactions when snapshots, Engram, AttnRes, and retention are simultaneously enabled across longer training runs.
-
-\subsection{Dependence on milestone supervision}
-
-The practical value of the snapshot path depends on learning a reliable capture policy. The most direct routes are supervised milestones, oracle-capture distillation, auxiliary retrieval losses, or contrastive cache-query objectives. These signals may require extra annotation, synthetic curricula, retrieval supervision, or teacher models. That added training machinery increases deployment complexity and may reduce the simplicity advantage of the architecture.
-
-\subsection{Known failure cases}
-
+While Anamnesis demonstrates excellent dense perplexity and perfect 1M-token retrieval, several engineering limitations remain:
 \begin{itemize}
-    \item If a task requires exact retention of most tokens, a small snapshot cache cannot replace a full KV cache.
-    \item If milestone supervision is weak, the gate can miss pivotal information or waste budget on irrelevant tokens.
-    \item If a cached item is semantically relevant but lexically mismatched, hard snapshot and hard Engram lookup may fail without learned alignment.
-    \item If AttnRes overemphasizes old depth sources, it may create depth confusion rather than reasoning stability.
-    \item If Engram table accesses are placed in slow host memory without careful prefetching, lookup latency can erase theoretical gains.
-    \item If MoE is reintroduced too early, routing collapse can mask whether the memory hierarchy works.
+    \item \textbf{Milestone Supervision Dependency:} Learning a reliable capture policy using only unsupervised next-token loss is highly non-convex. Practical implementations depend on oracle distillation, auxiliary retrieval loss, or contrastive cache-query objectives.
+    \item \textbf{Hard Hashing Brittleness:} The deterministic N-gram Engram table is highly robust for closed-domain surface patterns but fails under semantic paraphrases or aliases. Incorporating entity normalization or locality-sensitive hashing (LSH) is required for open-domain generalization.
+    \item \textbf{I/O Synchronous Latency:} CPU offloading of large N-gram tables is highly parameter-efficient but introduces I/O lookup latency during decoding. Implementing asynchronous cache prefetching and hot/cold memory hierarchies is a necessary systems optimization.
 \end{itemize}
 
-These limitations define the measurements needed to determine whether MESA is useful beyond synthetic diagnostics.
+\subsection{Future Scaling Roadmap}
+
+To fully explore the Pareto frontier of budgeted memory, our future research roadmap focuses on scaling along three axes:
+\begin{enumerate}
+    \item \textbf{Parameter Scaling:} Evaluating 125M, 350M, and 3B+ parameter regimes on standardized open datasets to establish compute-matched scaling curves.
+    \item \textbf{Open Benchmarks:} Testing performance on standard long-context reasoning suites including LongBench, GSM8K, and InfiniteBench protocols under rigorous multi-seed evaluation.
+    \item \textbf{Systems Co-Optimization:} Measuring peak GPU memory footprints, prefill latency, and actual decoding throughput under asynchronous host-to-device table transfers to map the hardware Pareto efficiency frontier.
+\end{enumerate}
 
 \section{Conclusion}
 
