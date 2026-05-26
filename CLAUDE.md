@@ -633,7 +633,25 @@ direction of the memory vector. Vector gating independently scales each dimensio
 introducing anisotropic distortion. The gap is modest (3%) because LM tasks are
 less sensitive to exact directional structure than retrieval tasks.
 
-### Phase 5.6: AttnRes Validation on Retrieval Pipeline
+### Phase 5.6: Inference Speed Benchmark
+
+**Inference-only throughput** (seq_len=512, batch=1, MPS, 5 warmup + 20 measured):
+
+| Model | d=128 tok/s | d=128 params | d=256 tok/s | d=256 params |
+|-------|------------|-------------|------------|-------------|
+| Anamnesis (Engram) | 37,078 | 7.93M | 26,498 | 19.07M |
+| Bare RetNet | 70,344 | 1.61M | 40,062 | 6.36M |
+| Transformer | 67,280 | 1.68M | 27,744 | 6.50M |
+
+Key observations:
+- Anamnesis is 45% slower than RetNet at d=128 due to 6.3M hash table parameters.
+- At d=256, Anamnesis is nearly the same speed as Transformer (26.5K vs 27.7K) —
+  Transformer's quadratic attention dominates at larger widths.
+- **Efficiency frontier**: Anamnesis d=128 achieves 7.91 PPL at 37K tok/s;
+  Transformer d=256 achieves 5.71 PPL at 28K tok/s. Different quality-speed tradeoffs.
+- RetNet is consistently fastest at all sizes (O(1) recurrent inference, no hash tables).
+
+### Phase 5.7: AttnRes Validation on Retrieval Pipeline
 
 **Scaling with Engram + AttnRes** (d=64, proj_dim=256, seed=42):
 
@@ -645,7 +663,7 @@ AttnRes is **neutral** on both LM (PPL) and retrieval (EM). Adds computation wit
 benefit. Retained as optional for potential use in very deep models or special tasks,
 but disabled by default.
 
-### Phase 5.7: Multi-Hop Retrieval (Planned)
+### Phase 5.8: Multi-Hop Retrieval (Planned)
 
 Requires new implementation: multi-needle data generation, multi-label retriever training,
 top-K retrieval, and evaluation of multi-hop reasoning over retrieved chunks.
