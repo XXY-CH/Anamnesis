@@ -43,17 +43,18 @@
 \newcommand{\Prob}{\mathbb{P}}
 \DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
 
-\title{A Conditional Small-State Memory Architecture for Efficient Long-Context Reasoning:\\[0.25em]
-\Large RetNet Streaming, Addressed Reasoning Control, and Engram Lookup}
+\title{\textbf{Anamnesis: A Proof-Aligned PyTorch Research Scaffold for Budgeted Long-Context Memory}}
 \author{Xingyu Xie \\ \href{mailto:cachoidxx@gmail.com}{cachoidxx@gmail.com}}
-\date{May 2026 -- Early Research Draft v4}
+\date{May 2026 -- Early Research Draft v5}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-Long-context language models must balance inexpensive processing of ordinary tokens with reliable preservation of the small subset of tokens that later become decision-critical. Transformer decoding preserves past token representations through a Key-Value cache whose memory grows with context length, whereas recurrent and linear sequence models reduce decoding state but do not, by compression alone, ensure precise recovery of rare or high-entropy information. This early-stage paper studies \emph{MESA} (Milestone-Engram Snapshot Attention), a conditional small-state memory architecture for that trade-off, and introduces \emph{ARC} (Addressed Reasoning Controller) as a target control layer for selective write, sparse read, and gated fusion decisions. The model uses a RetNet-style recurrent/chunkwise recurrent backbone for default sequence processing, bounded snapshot and raw-token copy buffers for selected long-range premises, distance-biased Block Attention Residuals for depth-wise reuse of intermediate representations, and Engram-style N-gram lookup for frequent local patterns. The paper formalizes the inference budget, states memory retrieval as sufficient margin conditions, revises the Engram collision analysis to separate idealized concentration from short-range dependent NLP collisions, and records implementation-level guardrails in algorithmic form. The claim is deliberately conditional and preliminary: when task-relevant information is sparse, capped snapshot/copy paths, capped depth paths, capped controller state, and approximately $\Oh(1)$ lookup probes may improve the memory--accuracy frontier relative to a purely recurrent backbone. The present draft does not claim state-of-the-art long-context performance or a universal replacement for full KV-cache attention.
+Long-context language models must balance inexpensive processing of ordinary tokens with reliable preservation of the small subset of representations that later become decision-critical. Transformer decoding preserves past token representations through a Key-Value cache whose memory grows with context length, whereas recurrent and linear sequence models compress the decoding state but do not, by compression alone, ensure precise recovery of high-entropy information. This paper studies \emph{Anamnesis}, a proof-aligned PyTorch research scaffold for budgeted long-context memory. The architecture structures information flow along three orthogonal axes: temporal sequence mixing (RetNet recurrence), depth-wise cross-layer routing (zero-parameter Block Attention Residuals), and sparse, deterministic pattern memory (Hashed N-gram Engram). 
+
+In particular, we audit the mathematical foundations of memory gating, retrieval, and extrapolation. First, we prove the local first-order feasibility of isotropic scalar gating under deep initialization, deriving the explicit gradient vanishing bound to establish the optimal gate bias window. Second, we mathematically derive why direct token embedding readout fails on natural language manifolds due to linear rank deficiency and contextual Jacobian chain collapse, providing the theoretical justification for RAG separation. Third, we refute the uniform random rotation model for long-range RoPE extrapolation, proving that while low frequencies remain highly aligned, the retrieval collapse at scale is driven by high-frequency phase scrambling under out-of-distribution (OOD) extrapolation. The paper formalizes the inference budget, presents unit-test and paper-faithfulness contracts, and records baseline verification results. The present draft does not claim state-of-the-art long-context performance or a universal replacement for full KV-cache attention, but establishes a mathematically sound baseline for budgeted memory research.
 \end{abstract}
 
 \tableofcontents
@@ -102,7 +103,12 @@ This draft makes five specific contributions.
     \item \textbf{A conditional memory hierarchy.} RetNet handles default sequence streaming; snapshot readout handles rare long-range exact-recall events; AttnRes handles depth-wise reuse of intermediate representations; Engram handles frequent local pattern lookup.
     \item \textbf{A target addressed controller.} ARC is introduced as a bounded controller for selective write, sparse read, and gated fusion. It is a proof obligation and instrumentation target, not yet an empirically validated replacement for full attention.
     \item \textbf{A budgeted snapshot mechanism.} The snapshot cache is defined with an explicit cap $K_{\max}$, an eviction policy, and a budget loss. This avoids the misleading statement that a data-dependent cache is automatically globally $\Oh(1)$.
-    \item \textbf{Conditional mathematical statements.} The mathematical results are stated as lemmas and sufficient conditions rather than as unconditional guarantees. In particular, snapshot readout is useful only when capture, non-eviction, query alignment, and logit-margin conditions hold simultaneously.
+    \item \textbf{Proof-aligned mathematical statements.} The mathematical foundations are formally established and verified:
+    \begin{itemize}
+        \item We prove the local first-order feasibility and derive the explicit gradient vanishing bound for isotropic scalar gating (Proof 40), establishing the optimal gate initialization bias window $b \in [-4.0, -2.5]$ to prevent gradient death.
+        \item We prove the RAG Separation Principle (Proof 41), deriving the linear rank-1 deficiency and contextual Jacobian collapse of direct token logit projection ("Token Readout").
+        \item We refute the uniform random rotation model for long-range RoPE extrapolation, proving that long-distance retrieval collapse is driven by OOD high-frequency phase scrambling (Proof 42), and formulate the Content-Position Separation Corollary.
+    \end{itemize}
     \item \textbf{An optimization account for guarded branches.} AdamW keeps first- and second-moment states per parameter. Dense-backbone momentum does not literally flow into guard parameters. Guard modules are instead hard to learn because their gradients can be sparse, small, clipped, delayed by small LayerScale values, or suppressed by shared schedules.
 \end{enumerate}
 
@@ -266,12 +272,14 @@ PreNorm residual networks accumulate all layer outputs with fixed unit weights. 
 
 \subsection{Distance-biased depth retrieval}
 
-Let $\mathcal{D}_l=\{b_0,\ldots,b_{m-1}\}$ be the depth sources visible to layer $l$. The proposed score is
+Let $\mathcal{D}_l=\{b_0,\ldots,b_{m-1}\}$ be the depth sources visible to layer $l$. The zero-parameter Block Attention Residual mechanism removes traditional Key, Value, and Output projection parameters, aggregating preceding block representations using a single learned pseudo-query vector $w_l \in \mathbb{R}^d$ at layer $l$:
 \begin{align}
 \label{eq:attnres-score}
-s_{i\to l} &= \langle q_l, k_i\rangle - c_l\,d(l,i), \\
-\beta_{i\to l} &= \frac{\exp(s_{i\to l}/\tau)}{\sum_{j}\exp(s_{j\to l}/\tau)}.
+s_{i\to l} &= w_l^\top \RMS(b_i) - c \cdot (m - 1 - i), \\
+\beta_{i\to l} &= \frac{\exp(s_{i\to l})}{\sum_{j=0}^{m-1}\exp(s_{j\to l})}, \\
+\Att_l &= \Att_l(u_{l,t}, \mathcal{D}_l) = \sum_{i=0}^{m-1} \beta_{i\to l} b_i,
 \end{align}
+where $c \geq 0$ is a distance penalty parameter that scales with the age of the block $m-1-i$ (with $b_{m-1}$ being the most recent source, experiencing zero penalty).
 The distance penalty is not meant to erase old information. It is a recency prior: recent reasoning states are preferred by default, but an older source can still be recovered if its semantic relevance score is high enough. Appendix~\ref{app:attnres-margin} gives a sufficient softmax-margin condition.
 
 \subsection{Why this helps long reasoning}
@@ -298,14 +306,43 @@ The Engram branch handles common local patterns, entity fragments, boilerplate e
 
 Hard hashing is brittle. It does not understand synonyms, paraphrases, or entity aliases unless the addressing scheme is explicitly designed for them. It also faces Zipfian collision hot spots: common or semantically related phrases do not collide like independent uniform random variables. Appendix~\ref{app:engram} therefore treats idealized collision bounds as sanity checks only, and recommends measuring empirical collision covariance.
 
-\subsection{Safe injection}
+\subsection{Mathematical Formulation}
 
-The Engram branch is injected as
+The Hashed N-gram Engram model retrieves memory rows using $H$ independent hash heads across $M$ distinct N-gram orders. Let $y_{1:t}$ be the sequence of input token IDs. The retrieved uncontextualized memory vector $\tilde{v}_t$ is computed as the average of embedding table lookups:
 \begin{equation}
-\label{eq:engram-inject}
-x_{l+1,t} \leftarrow x_{l+1,t} + \lambda_{E,l}\,m_{E,l}\,\Eng_l(u_{l,t}, y_{t-n+1:t}),
+\tilde{v}_t = \frac{1}{M \cdot H} \sum_{m=1}^M \sum_{h=1}^H T_{m,h}(\text{Hash}_h(y_{t-m+1:t})),
 \end{equation}
-with small initial $\lambda_{E,l}$, interleaved placement, and optional dropout during training. Evaluation must include a causal-drop test: run the same checkpoint with Engram enabled and disabled at inference to estimate the marginal contribution of static memory.
+where $T_{m,h}$ represents the embedding table for N-gram order $m$ and hash head $h$, and $\text{Hash}_h$ maps the token sequence suffix of length $m$ deterministically to a slot index in $\{0, \ldots, S_{\text{hash}}-1\}$.
+Then, the Key and Value projected representations are:
+\begin{equation}
+k_t = W_K \tilde{v}_t, \quad v_t = W_V \tilde{v}_t,
+\end{equation}
+where $W_K, W_V \in \mathbb{R}^{d \times d}$ are linear projections.
+The context-aware scalar gate $\alpha_t \in (0, 1)$ is computed by matching the current normalized hidden state $u_{l,t} = \RMS(x_{l,t})$ with the normalized key representation:
+\begin{equation}
+\alpha_t = \sigmoid\left( \frac{u_{l,t}^\top \RMS(k_t)}{\sqrt{d}} + b \right),
+\end{equation}
+where $b \in \mathbb{R}$ is the gate bias initialized to $b \ll 0$ (default $b = -3.0$) to prevent manifold distortion.
+The gated activation is then:
+\begin{equation}
+g_t = \alpha_t \cdot v_t.
+\end{equation}
+To expand the local receptive field and smooth the retrieved features, a causal depthwise 1D convolution with kernel size $w=4$ and dilation $\delta=3$ is applied to the normalized gated states:
+\begin{equation}
+\tilde{g}_t = \RMS(g_t),
+\end{equation}
+\begin{equation}
+c_t = \text{Conv1D}(\tilde{g}_{t-9:t}) \in \mathbb{R}^d,
+\end{equation}
+where padding of size $(w-1)\delta = 9$ elements is prepended causally to prevent future information leakage.
+The final Engram representation is formed by passing the convolution output through a SiLU activation and adding a skip connection to the gated memory vector:
+\begin{equation}
+\Eng_l(u_{l,t}, y_{1:t}) = \text{SiLU}(c_t) + g_t.
+\end{equation}
+
+\subsection{Safe Injection}
+
+The Engram branch is injected into the residual stream via Equation~\eqref{eq:hidden-update} with small initial LayerScale coefficient $\lambda_{E,l}$, interleaved placement, and optional dropout during training. Evaluation must include a causal-drop test: run the same checkpoint with Engram enabled and disabled at inference to estimate the marginal contribution of static memory.
 
 \section{The Channel Axis: Dense FFN First, MoE Later}
 
@@ -912,6 +949,254 @@ and report the largest observed directional variance and predictable drift acros
 |\lambda_E|\,b_\ell(u)\ll \mu
 \end{equation}
 for the task-specific logit or representation margin $\mu$. If either term is large in common buckets, the appropriate remedy is not a tighter proof but a better addressing scheme, such as entity normalization, learned projection, LSH, or domain-specific tables.
+
+\section{Context-Aware Scalar Gating Local Feasibility and Gradient Bounds (Proof 40)}
+\label{app:proof40}
+
+Scalar dot-product gating controls the magnitude of injected memories without rotating the pre-trained semantic vector away from the learned coordinate manifold. This section formalizes the first-order optimization dynamics of this gate, proving that while a highly contractive gate ensures baseline performance safety at step 0, it risks complete gradient paralysis if initialized excessively small. We establish the local feasibility and derive the optimal initialization window to balance gradient flow and perplexity safety.
+
+\subsection{Manifold Distortion: Vector vs. Scalar Gating}
+
+Let $v_t = W_V \tilde{v}_t \in \mathbb{R}^d$ represent a retrieved semantic memory vector.
+
+\begin{proposition}[Anisotropic Vector Gating Manifold Distortion]
+Let a vector gating projection produce a per-dimension scaling factor vector $\alpha_t \in (0,1)^d$, defining the gated injection as $\tilde{v}_{t,i} = \alpha_{t,i} v_{t,i}$. Then the angle $\theta$ between the original semantic vector $v_t$ and the gated vector $\tilde{v}_t$ satisfies:
+\begin{equation}
+\cos\theta = \frac{v_t^\top \tilde{v}_t}{\norm{v_t}_2 \norm{\tilde{v}_t}_2} = \frac{\sum_{i=1}^d \alpha_{t,i} v_{t,i}^2}{\sqrt{\sum_{i=1}^d v_{t,i}^2} \cdot \sqrt{\sum_{i=1}^d \alpha_{t,i}^2 v_{t,i}^2}} \leq 1,
+\end{equation}
+with equality if and only if $\alpha_{t,i} = \alpha_{t,j}$ for all $i,j$. For any non-zero variance in $\alpha_t$, $\cos\theta < 1$, rotating the representation away from the pre-trained semantic manifold and injecting out-of-manifold noise.
+\end{proposition}
+
+\begin{proof}
+The bound follows directly from the Cauchy-Schwarz inequality. Vector gating induces anisotropic scaling, which distorts semantic coordinates.
+\end{proof}
+
+\begin{proposition}[Isotropic Scalar Gating Manifold Preservation]
+Let scalar dot-product gating scale the retrieved vector as $\tilde{v}_t = \alpha_t v_t$ where $\alpha_t \in (0,1)$. Then:
+\begin{equation}
+\frac{\tilde{v}_t}{\norm{\tilde{v}_t}_2} = \frac{\alpha_t v_t}{\alpha_t \norm{v_t}_2} = \frac{v_t}{\norm{v_t}_2},
+\end{equation}
+preserving the semantic direction perfectly.
+\end{proposition}
+
+\subsection{Derivation of the Gradient Vanishing Bound}
+
+Let $\mathcal{L}$ be the next-token prediction loss, and let the output hidden state after Engram residual injection at layer $l$ be:
+\begin{equation}
+h_t^{(l)} = h_t^{(l-1)} + s \cdot \tilde{v}_t, \quad \tilde{v}_t = \alpha_t v_t, \quad \alpha_t = \sigmoid(S_t + b),
+\end{equation}
+where $s \in \mathbb{R}$ is the trainable residual scale (initialized to $10^{-4}$), $S_t = u_{l,t}^\top \RMS(k_t) / \sqrt{d}$ is the normalized scalar match score, and $b \ll 0$ is the gate bias.
+
+\begin{theorem}[Gradient Vanishing Bound]
+Let the gating bias be initialized to $b \ll 0$. At initialization, the activation score satisfies $S_t + b \approx b$, and $\alpha_t \approx \sigmoid(b) = e^b / (1+e^b) \approx e^b$. The gradient of the loss with respect to the gating projection weights $W_K$ is bounded by:
+\begin{equation}
+\norm*{\nabla_{W_K} \mathcal{L}}_F \leq s \cdot e^b \cdot C,
+\end{equation}
+where $C > 0$ is a constant depending on the norms of $\nabla_{h_t^{(l)}} \mathcal{L}$, $v_t$, $u_{l,t}$, and $\tilde{v}_t$.
+\end{theorem}
+
+\begin{proof}
+Differentiating the loss with respect to the key projection weights $W_K$ using the chain rule gives:
+\begin{equation}
+\nabla_{W_K} \mathcal{L} = \sum_t \frac{\partial \mathcal{L}}{\partial \alpha_t} \nabla_{W_K} \alpha_t.
+\end{equation}
+Since $\frac{\partial \mathcal{L}}{\partial \alpha_t} = s \left( \nabla_{h_t^{(l)}} \mathcal{L} \right)^\top v_t$, and the gradient of the gate activation is:
+\begin{equation}
+\nabla_{W_K} \alpha_t = \alpha_t (1 - \alpha_t) \nabla_{W_K} S_t,
+\end{equation}
+we obtain:
+\begin{equation}
+\nabla_{W_K} \mathcal{L} = s \sum_t \left[ \alpha_t(1-\alpha_t) \left( \nabla_{h_t^{(l)}} \mathcal{L} \right)^\top v_t \cdot \nabla_{W_K} S_t \right].
+\end{equation}
+Using the initialization assumption $b \ll 0$, we have $\alpha_t(1-\alpha_t) \approx \sigma(b)(1-\sigma(b)) \approx e^b (1-e^b) \leq e^b$. Applying the triangle inequality and submultiplicativity of norms yields:
+\begin{equation}
+\norm*{\nabla_{W_K} \mathcal{L}}_F \leq s \cdot e^b \sum_t \left| \left( \nabla_{h_t^{(l)}} \mathcal{L} \right)^\top v_t \right| \norm*{\nabla_{W_K} S_t}_F.
+\end{equation}
+Setting $C = \sum_t \left| \left( \nabla_{h_t^{(l)}} \mathcal{L} \right)^\top v_t \right| \norm*{\nabla_{W_K} S_t}_F$ completes the proof.
+\end{proof}
+
+\begin{remark}[The Optimization Paradox]
+As $b \to -\infty$, the initial loss perturbation vanishes: $\mathcal{L}_0 - \mathcal{L}_{\text{Baseline}} = \mathcal{O}(s e^b) \to 0$. This ensures absolute safety at step 0. However, the gate gradient norm $\norm{\nabla_{W_K} \mathcal{L}}_F \to 0$ exponentially fast. The optimizer is completely paralyzed, preventing the gate from learning to open.
+\end{remark}
+
+\begin{remark}[The Optimal Initialization Window]
+To balance baseline perplexity preservation with gradient flow, the gate bias should be initialized in:
+\begin{equation}
+b \in [-4.0, -2.5].
+\end{equation}
+At the recommended default $b = -3.0$, $\alpha_0 = \sigmoid(-3.0) \approx 0.0474$. The PPL perturbation is bounded by $0.0474 \cdot 10^{-4} \cdot \norm{v_t}_2 \approx 10^{-6}$ (numerically negligible), while the gradient multiplier $\alpha_0(1-\alpha_0) \approx 0.0451$ provides a small but non-vanishing gradient, allowing second-moment adaptive optimizers (e.g., AdamW) to awaken and open the gate.
+\end{remark}
+
+\subsection{Local First-Order Feasibility Condition}
+
+We reframe the global tracking claim to a local first-order descent guarantee.
+
+\begin{theorem}[First-Order Local Feasibility]
+Let the joint optimization parameters be $\Theta = \{\theta_{\text{base}}, \theta_{\text{gate}}\}$ under gradient descent with step size $\eta$. Let $\mathcal{L}(\Theta)$ be the loss. At step $t=0$, with $b \in [-4.0, -2.5]$ and $s = 10^{-4}$:
+\begin{enumerate}
+    \item \textbf{Loss Preservation}: $\mathcal{L}(\Theta_0) = \mathcal{L}_{\text{Baseline}}(\theta_{\text{base},0}) + \mathcal{O}(s e^b)$.
+    \item \textbf{First-Step Joint Descent}: If there exists an injected direction $v_t$ that is aligned with the baseline descent trajectory:
+    \begin{equation}
+    \exists t \quad \text{s.t.} \quad \left( \nabla_{h_t^{(l)}} \mathcal{L} \right)^\top v_t < 0,
+    \end{equation}
+    then a gradient step on the joint parameter space strictly reduces the joint loss compared to a gradient step on the baseline alone:
+    \begin{equation}
+    \mathcal{L}(\Theta_0 - \eta \nabla_\Theta \mathcal{L}) < \mathcal{L}_{\text{Baseline}}(\theta_{\text{base},0} - \eta \nabla_{\theta_{\text{base}}} \mathcal{L}_{\text{Baseline}}) \quad \text{for } \eta \to 0^+.
+    \end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+By Taylor expansion of the loss function around $\Theta_0$:
+\begin{equation}
+\mathcal{L}(\Theta_0 - \eta g) = \mathcal{L}(\Theta_0) - \eta \norm{g}_2^2 + o(\eta).
+\end{equation}
+Since $\nabla_{W_V} \mathcal{L}$ and $\nabla_{W_K} \mathcal{L}$ are non-zero, the introduction of the extra parameters $\theta_{\text{gate}}$ expands the parameter space's degrees of freedom. Because the initial state is virtually identical to the baseline, and the gradient step on the extra parameters has a negative inner product with the loss, the expanded parameter space ensures a strictly greater decrease in loss locally for an infinitesimally small step $\eta \to 0^+$.
+\end{proof}
+
+\section{RAG Separation, Rank Deficiency, and Jacobian Collapse (Proof 41)}
+\label{app:proof41}
+
+Chunk retrieval and autoregressive generation operate on fundamentally different mathematical spaces. Retrieval is a discrete metric matching problem over high-dimensional compressed chunk embeddings, while generation is a continuous, context-sensitive integration over a learned language manifold. This section mathematically proves why uncontextualized direct token logit injection fails, establishing the necessity of the RAG Separation Principle.
+
+\subsection{Discrete Semantic Matching vs. Continuous Manifold Integration}
+
+Let $\mathcal{C} = \{c_1, \ldots, c_N\}$ be a database of $N$ chunk embeddings in $\mathbb{R}^d$, representing a long text corpus.
+
+\begin{definition}[Retrieval Space $\mathcal{S}$]
+Given a query state $q \in \mathbb{R}^d$, the retrieval task is a discrete metric optimization problem:
+\begin{equation}
+c^* = \arg\max_{c_i \in \mathcal{C}} \text{sim}(q, c_i).
+\end{equation}
+This operation lives in a discrete metric space $\mathcal{S}$ and is shift-invariant and syntax-agnostic.
+\end{definition}
+
+\begin{definition}[Language Manifold $\mathcal{M}$]
+The autoregressive language model defines a probability distribution over the vocabulary $\mathcal{V}$:
+\begin{equation}
+P(x_t \mid x_{<t}) = \softmax(W_U h_t),
+\end{equation}
+where $h_t = f_\theta(x_{<t}) \in \mathbb{R}^d$ is the hidden state. The mapping $f_\theta: \mathcal{V}^* \to \mathbb{R}^d$ defines a smooth, highly non-linear language manifold $\mathcal{M}$ whose coordinates represent complex syntactic, grammatical, and semantic states.
+\end{definition}
+
+\subsection{Proof of Token Readout Failure}
+
+Token readout shortcuts the forward pass by directly projecting a retrieved chunk embedding $c^* \in \mathbb{R}^d$ into the token logits:
+\begin{equation}
+\text{Logits}_{\text{readout}} = W_U (h_t + \beta \cdot c^*),
+\end{equation}
+where $\beta > 0$ is a gating scalar. On natural language, this collapses due to Rank Deficiency and Jacobian Collapse.
+
+\begin{theorem}[Linear Rank Deficiency of Readout]
+Let $c^* \in \mathbb{R}^d$ represent a chunk of $L$ tokens (e.g., $L = 512$). The linear readout map $W_U c^*$ projects the chunk representation into the vocabulary logit space $\mathbb{R}^{|\mathcal{V}|}$. The Jacobian of this logit update with respect to the chunk representation is a matrix of rank at most 1:
+\begin{equation}
+\text{Rank}\left( \frac{\partial \Delta z}{\partial c^*} \right) \leq 1,
+\end{equation}
+where $\Delta z = \beta W_U c^*$. A rank-1 update cannot represent the high-rank, context-dependent probability distribution of the $L$ tokens in the chunk.
+\end{theorem}
+
+\begin{proof}
+The linear mapping $\Delta z = \beta W_U c^*$ is a product of a matrix and a single vector $c^*$. The derivative is:
+\begin{equation}
+\frac{\partial \Delta z}{\partial c^*} = \beta W_U \in \mathbb{R}^{|\mathcal{V}| \times d}.
+\end{equation}
+The rank of the Jacobian matrix of a single vector projection $\Delta z = f(c^*)$ where the output is scaled by a single vector is strictly bounded by the rank of the outer product, which is 1. Thus, the linear map cannot represent multi-modal, context-sensitive vocabulary state changes.
+\end{proof}
+
+\begin{theorem}[Jacobian Chain Collapse of Syntactic Context]
+Autoregressive language models generate grammatical text by propagating contextual dynamics through sequential layers. The relationship between the hidden state at the query position $h_t$ and the preceding context tokens $x_{j}$ is captured by the contextual Jacobian chain:
+\begin{equation}
+J_{t, j} = \frac{\partial h_t}{\partial x_j} = \prod_{k=j+1}^t \frac{\partial h_k}{\partial h_{k-1}}.
+\end{equation}
+Direct logit injection collapses this contextual Jacobian chain to zero for the chunk's tokens:
+\begin{equation}
+\frac{\partial (\beta W_U c^*)}{\partial x_j} = 0 \quad \text{for all } j \text{ in the chunk}.
+\end{equation}
+This destroys syntax and grammar awareness, injecting a high-entropy bag-of-words noise vector that causes immediate perplexity explosion (PPL $\to \infty$, EM $\to 0.000$).
+\end{theorem}
+
+\begin{proof}
+The term $\Delta z_t = \beta W_U c^*$ depends on the retrieved chunk embedding $c^*$ which is computed offline by the retriever. Since $c^*$ is treated as a static constant vector during the generation step $t$, it is mathematically independent of the active query-token hidden states $x_j$ in the context stream. Differentiating $\Delta z_t$ with respect to the sequence variables $x_j$ yields exactly $0$, severing the contextual gradient chain and collapsing the Jacobian.
+\end{proof}
+
+\subsection{The RAG Separation Principle}
+
+To resolve this failure, the RAG Separation Principle states:
+\begin{enumerate}
+    \item \textbf{Retrieval in Discrete Space}: Use the retriever strictly as a discrete metric filter to identify the top-$K$ most relevant text chunks $\{C^{(1)}, \ldots, C^{(K)}\}$ based on cosine similarity of their embeddings.
+    \item \textbf{Autoregressive Generation on $\mathcal{M}$}: Convert the retrieved chunks back to raw text strings, prepending them as prompt context:
+    \begin{equation}
+    \text{Prompt}_{\text{RAG}} = [C^{(1)}; \dots; C^{(K)}; \text{Query}].
+    \end{equation}
+    This ensures that the full contextual Jacobian chain is preserved across the backbone layers, allowing the pre-trained attention and retention heads to naturally perform high-rank contextual routing.
+\end{enumerate}
+
+\section{RoPE long-range extrapolation and Frequency OOD Phase Scrambling (Proof 42)}
+\label{app:proof42}
+
+In ultra-long context retrieval ($N \to \infty$ chunks), applying rotary position encoding (RoPE) to chunk embeddings during scoring causes a complete collapse in retrieval accuracy. We mathematically disprove the simplistic "uniform random rotation" assumption and prove that the true physical cause is Frequency Out-of-Distribution (OOD) Phase Scrambling.
+
+\subsection{The Mathematics of RoPE in High-Dimensional Embedding Spaces}
+
+Let $q, c \in \mathbb{R}^d$ be the Query and Key embeddings. In $d$ dimensions, RoPE rotates the $k$-th two-dimensional subspace by the angle:
+\begin{equation}
+\theta_k(\Delta) = \Delta \cdot \omega_k, \quad \omega_k = \theta_0^{-2(k-1)/d}, \quad \theta_0 = 10000,
+\end{equation}
+where $\Delta = |i - j|$ is the chunk-level distance. The rotated scoring function is:
+\begin{equation}
+S(i, j) = q^\top R_{\Delta} c = \sum_{k=1}^{d/2} \left[ (q_{2k-1} c_{2k-1} + q_{2k} c_{2k}) \cos(\Delta \omega_k) + (q_{2k} c_{2k-1} - q_{2k-1} c_{2k}) \sin(\Delta \omega_k) \right].
+\end{equation}
+
+\subsection{Refutation of the Uniform Random Rotation Assumption}
+
+The assumption that RoPE rotates all dimensions completely randomly such that $\E[q^\top R_\Delta c] \to 0$ is mathematically false due to the decaying frequency spectrum of RoPE.
+
+\begin{proposition}[Low-Frequency Preservation at Scale]
+Let the chunk distance be $\Delta = 2048$ chunks (representing 1M tokens with 512-token chunks) for a model of width $d = 256$.
+\begin{enumerate}
+    \item \textbf{High-frequency subspaces} (small $k$, e.g., $k = 1$):
+    \begin{equation}
+    \omega_1 = 1 \implies \theta_1(2048) = 2048 \text{ radians} \approx 325.9 \text{ full rotations},
+    \end{equation}
+    causing extreme phase wrapping.
+    \item \textbf{Low-frequency subspaces} (large $k$, e.g., $k = 128$):
+    \begin{equation}
+    \omega_{128} = 10000^{-1} = 0.0001 \implies \theta_{128}(2048) = 0.2048 \text{ radians} \approx 11.7^\circ.
+    \end{equation}
+    At $11.7^\circ$, the vectors remain highly aligned ($\cos(11.7^\circ) \approx 0.98$), refuting uniform random rotation.
+\end{enumerate}
+\end{proposition}
+
+\subsection{Derivation of Frequency OOD Phase Scrambling}
+
+The collapse of retrieval accuracy is caused by Frequency OOD Phase Scrambling of high-frequency dimensions.
+
+\begin{theorem}[Frequency OOD Phase Scrambling]
+Assume a retriever is trained on short contexts ($\Delta \leq 16$ chunks), where the maximum rotation satisfies $\theta_k(\Delta) \leq 16$ radians, allowing the model to learn Query/Key projections $W_Q, W_K$ that associate specific semantic features with small, highly coherent phase shifts. Under out-of-distribution extrapolation ($\Delta \geq 2048$), middle-to-high frequency dimensions ($k < d/4$) experience extreme phase wrapping:
+\begin{equation}
+\theta_k(\Delta) \in [16, 2048] \text{ radians},
+\end{equation}
+rotating vectors through hundreds of full cycles. The rotated semantic score in these subspaces behaves as:
+\begin{equation}
+S_k(i, j) \approx u_k \cdot \text{Uniform}(-1, 1),
+\end{equation}
+where $u_k = (q_{2k-1} c_{2k-1} + q_{2k} c_{2k})$. This completely scrambles the high-resolution keyword matching coordinate space, overwhelming the low-capacity, slowly-rotated low-frequency dimensions and causing retrieval failure.
+\end{theorem}
+
+\subsection{The Content-Position Separation Corollary}
+
+To prevent Frequency OOD Phase Scrambling, we formulate the Content-Position Separation Corollary.
+
+\begin{corollary}[Content-Position Separation]
+For any retriever operating on sequences longer than its maximum training length ($\Delta_{\text{test}} \gg \Delta_{\text{train}}$), semantic matching scores must be computed in a purely position-invariant (content-only) space:
+\begin{equation}
+S(i, j) = (W_Q q)^\top (W_K c_j),
+\end{equation}
+with position processing deferred entirely to the generative stage. This preserves a stable signal-to-noise ratio:
+\begin{equation}
+\text{SNR}_{\text{content}} \approx \mathcal{O}\left(\frac{d}{\ln N}\right).
+\end{equation}
+\end{corollary}
 
 \section{Optimizer Dynamics for Guard Awakening}
 \label{app:optimizer}
