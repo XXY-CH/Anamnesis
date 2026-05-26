@@ -29,6 +29,7 @@ class HashedNgramEngram(nn.Module):
         gate_bias: float = -3.0,
         dropout: float = 0.0,
         table_device: str | torch.device | None = None,
+        use_conv: bool = True,
     ) -> None:
         super().__init__()
         self.vocab_size = vocab_size
@@ -37,6 +38,7 @@ class HashedNgramEngram(nn.Module):
         self.max_ngram = max_ngram
         self.num_hash_heads = num_hash_heads
         self.table_device = torch.device(table_device) if table_device is not None else None
+        self.use_conv = use_conv
 
         self.tables = nn.ModuleList(
             [nn.Embedding(num_slots, d_model) for _ in range(max_ngram * num_hash_heads)]
@@ -53,18 +55,19 @@ class HashedNgramEngram(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.residual_scale = nn.Parameter(torch.tensor(float(init_scale)))
 
-        self.conv_norm = nn.RMSNorm(d_model)
-        self.conv = nn.Conv1d(
-            in_channels=d_model,
-            out_channels=d_model,
-            kernel_size=4,
-            stride=1,
-            padding=0,
-            dilation=3,
-            groups=d_model,
-            bias=False,
-        )
-        nn.init.normal_(self.conv.weight, std=d_model**-0.5)
+        if use_conv:
+            self.conv_norm = nn.RMSNorm(d_model)
+            self.conv = nn.Conv1d(
+                in_channels=d_model,
+                out_channels=d_model,
+                kernel_size=4,
+                stride=1,
+                padding=0,
+                dilation=3,
+                groups=d_model,
+                bias=False,
+            )
+            nn.init.normal_(self.conv.weight, std=d_model**-0.5)
 
         salts = torch.arange(1, max_ngram * num_hash_heads + 1, dtype=torch.long)
         self.register_buffer("salts", salts * 0x9E3779B1, persistent=False)
@@ -160,13 +163,14 @@ class HashedNgramEngram(nn.Module):
         value = self.value_proj(memory)
         gated = gate * value
 
-        # Causal depthwise 1D convolution (Equation 5)
-        # padding size = (kernel_size - 1) * dilation = 3 * 3 = 9
-        # conv_in: [batch, d_model, seq_len]
-        conv_in = self.conv_norm(gated).transpose(1, 2)
-        padded = torch.nn.functional.pad(conv_in, (9, 0))
-        conv_out = self.conv(padded).transpose(1, 2) # [batch, seq_len, d_model]
+        if self.use_conv:
+            # Causal depthwise 1D convolution (Equation 5)
+            conv_in = self.conv_norm(gated).transpose(1, 2)
+            padded = torch.nn.functional.pad(conv_in, (9, 0))
+            conv_out = self.conv(padded).transpose(1, 2)
+            Y = torch.nn.functional.silu(conv_out) + gated
+        else:
+            Y = gated
 
-        Y = torch.nn.functional.silu(conv_out) + gated
         residual = self.residual_scale.abs() * self.dropout(Y)
         return residual, gate

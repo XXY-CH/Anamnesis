@@ -241,6 +241,7 @@ def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel | T
         engram_num_slots=args.engram_slots,
         engram_max_ngram=args.engram_max_ngram,
         engram_hash_heads=args.engram_hash_heads,
+        engram_use_conv=args.engram_use_conv,
     )
     return AnamnesisModel(config)
 
@@ -431,6 +432,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--engram-slots", type=int, default=4096)
     p.add_argument("--engram-max-ngram", type=int, default=3)
     p.add_argument("--engram-hash-heads", type=int, default=4)
+    p.add_argument("--engram-use-conv", action="store_true", default=True)
+    p.add_argument("--no-engram-conv", action="store_false", dest="engram_use_conv")
 
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--steps", type=int, default=5000)
