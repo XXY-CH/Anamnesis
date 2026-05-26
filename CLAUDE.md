@@ -595,6 +595,12 @@ AttnRes is **neutral** on both LM (PPL) and retrieval (EM). Adds computation wit
 benefit. Retained as optional for potential use in very deep models or special tasks,
 but disabled by default.
 
+### Phase 5.4: Multi-Hop Retrieval (Planned)
+
+Requires new implementation: multi-needle data generation, multi-label retriever training,
+top-K retrieval, and evaluation of multi-hop reasoning over retrieved chunks.
+Not yet implemented — documented as next milestone.
+
 **Key finding**: Scalar-gated Engram improves LM PPL by 22%. This validates Proof 40's
 prediction that initial perturbation is O(s·e^b) ≈ 10⁻⁵ (negligible). The Engram's static
 hash tables provide useful prior knowledge for character-level language modeling.
