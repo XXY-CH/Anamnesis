@@ -24,6 +24,7 @@ class RetentionLayer(nn.Module):
         chunk_size: int = 256,
         dropout: float = 0.0,
         input_dependent_gamma: bool = False,
+        input_dependent_write: bool = False,
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -31,6 +32,7 @@ class RetentionLayer(nn.Module):
         self.head_dim = d_model // n_heads
         self.chunk_size = chunk_size
         self.input_dependent_gamma = input_dependent_gamma
+        self.input_dependent_write = input_dependent_write
 
         self.q_proj = nn.Linear(d_model, d_model, bias=False)
         self.k_proj = nn.Linear(d_model, d_model, bias=False)
@@ -48,6 +50,12 @@ class RetentionLayer(nn.Module):
                     (self.gamma / (1 - self.gamma)).log()
                 )
 
+        if input_dependent_write:
+            self.write_proj = nn.Linear(d_model, n_heads, bias=True)
+            with torch.no_grad():
+                nn.init.zeros_(self.write_proj.weight)
+                nn.init.constant_(self.write_proj.bias, 2.0)
+
     def _init_decay(self) -> None:
         """Initialize fixed RetNet-style per-head decay rates below one."""
         if self.n_heads == 1:
@@ -64,6 +72,10 @@ class RetentionLayer(nn.Module):
 
     def _compute_dynamic_gamma(self, x: torch.Tensor) -> torch.Tensor:
         return torch.sigmoid(self.gamma_proj(x))
+
+    def _compute_write_gate(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute input-dependent write gate: [batch, seq_len, n_heads]."""
+        return torch.sigmoid(self.write_proj(x))
 
     def _resolve_gate(
         self,
@@ -97,6 +109,12 @@ class RetentionLayer(nn.Module):
         q = self._split_heads(self.q_proj(x))
         k = self._split_heads(self.k_proj(x))
         v = self._split_heads(self.v_proj(x))
+
+        # Apply input-dependent write gate: scale V per-position per-head
+        if self.input_dependent_write:
+            wg = self._compute_write_gate(x)  # [batch, seq_len, n_heads]
+            wg = wg.permute(0, 2, 1).unsqueeze(-1)  # [batch, heads, seq, 1]
+            v = v * wg
 
         positions = torch.arange(seq_len, device=x.device)
         diff = positions.unsqueeze(1) - positions.unsqueeze(0)  # [i, j] = i - j
@@ -162,14 +180,19 @@ class RetentionLayer(nn.Module):
         if state is None:
             state = torch.zeros(batch, self.n_heads, self.head_dim, self.head_dim, device=x.device)
 
-        # Update state: S = gamma * S + k^T v
+        # Update state: S = gamma * S + write_gate * k^T v
         if retention_gate is None:
             gamma = self.gamma.to(device=x.device, dtype=x.dtype).view(1, self.n_heads, 1, 1)
         else:
             gamma = retention_gate.to(device=x.device, dtype=x.dtype).view(
                 batch, self.n_heads, 1, 1
             )
-        new_state = gamma * state + torch.einsum("bhld,bhle->bhde", k, v)
+        kv = torch.einsum("bhld,bhle->bhde", k, v)
+        if self.input_dependent_write:
+            wg = self._compute_write_gate(x)  # [batch, 1, n_heads]
+            wg = wg.squeeze(1).view(batch, self.n_heads, 1, 1)
+            kv = kv * wg
+        new_state = gamma * state + kv
 
         # Output: q @ state
         output = torch.einsum("bhld,bhde->bhle", q, new_state)
@@ -227,6 +250,13 @@ class RetentionLayer(nn.Module):
         q = self._split_heads(self.q_proj(x))
         k = self._split_heads(self.k_proj(x))
         v = self._split_heads(self.v_proj(x))
+
+        # Compute write gate once for both within-chunk and state update
+        write_gate = None
+        if self.input_dependent_write:
+            write_gate = self._compute_write_gate(x)  # [batch, chunk_len, n_heads]
+            wg = write_gate.permute(0, 2, 1).unsqueeze(-1)  # [batch, heads, chunk, 1]
+            v = v * wg
 
         if state is None:
             state = torch.zeros(

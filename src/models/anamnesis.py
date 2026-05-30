@@ -59,6 +59,7 @@ class AnamnesisConfig:
     position_encoding_type: str = "learned"  # "learned" or "sinusoidal"
     input_dependent_gamma: bool = False
     retention_output_gate: bool = False
+    input_dependent_write: bool = False
     use_learned_gate: bool = False
     use_engram_tcb_trigger: bool = False
 
@@ -105,6 +106,7 @@ class AnamnesisLayer(nn.Module):
             n_heads=config.n_heads,
             dropout=config.dropout,
             input_dependent_gamma=config.input_dependent_gamma,
+            input_dependent_write=config.input_dependent_write,
         )
 
         self.ffn_norm = nn.RMSNorm(config.d_model)
