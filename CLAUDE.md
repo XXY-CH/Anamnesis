@@ -741,10 +741,20 @@ The architecture is now:
 - **AnamnesisModel** = RetNet (8 heads, layerwise gamma) + scalar-gated Engram
 - **External pipeline** = Chunk retriever for ultra-long context (1M tokens)
 
-### Phase 5.10: Multi-Seed Validation (Planned)
+### Phase 5.10: Multi-Seed Validation (COMPLETE)
 
-Need 3-seed validation (42, 100, 200) for 8h+layerwise config on Shakespeare.
-Required for paper credibility — previous results (Phase 5.4) used 3 seeds.
+**3-seed Shakespeare validation** (d=128, 8L, 8h+layerwise+Engram, 2000 steps):
+
+| Model | seed=42 | seed=100 | seed=200 | **Mean ± Std** |
+|-------|---------|----------|----------|----------------|
+| Bare RetNet | 9.78 | 9.86 | 10.14 | 9.93 ± 0.19 |
+| Transformer d=128 | 9.78 | 9.66 | 9.74 | 9.73 ± 0.06 |
+| Anamnesis 4h (Engram) | 7.59 | 8.13 | 8.01 | 7.91 ± 0.28 |
+| **8h+layerwise (Engram)** | **5.77** | **5.33** | **5.52** | **5.54 ± 0.18** |
+
+Non-overlapping confidence intervals with all baselines.
+44% better than RetNet/Transformer at same d=128.
+Matches Transformer d=256 (5.71) at half model width.
 
 ## Autonomous Research Loop
 
