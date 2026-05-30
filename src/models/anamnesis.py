@@ -66,6 +66,7 @@ class AnamnesisConfig:
     learnable_gamma: bool = False
     layerwise_gamma: bool = False
     layerwise_gamma_spread: float = 1.0
+    layerwise_gamma_reverse: bool = False
 
 
 def sinusoidal_encoding(
@@ -113,9 +114,13 @@ class AnamnesisLayer(nn.Module):
             input_dependent_write=config.input_dependent_write,
             learnable_gamma=config.learnable_gamma,
             layer_depth=(
-                layer_idx / max(config.n_layers - 1, 1)
-                if config.layerwise_gamma
-                else None
+                (1.0 - layer_idx / max(config.n_layers - 1, 1))
+                if config.layerwise_gamma and config.layerwise_gamma_reverse
+                else (
+                    layer_idx / max(config.n_layers - 1, 1)
+                    if config.layerwise_gamma
+                    else None
+                )
             ),
             gamma_spread=config.layerwise_gamma_spread,
         )

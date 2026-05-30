@@ -345,6 +345,7 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         learnable_gamma=bool(getattr(args, "learnable_gamma", False)),
         layerwise_gamma=bool(getattr(args, "layerwise_gamma", False)),
         layerwise_gamma_spread=float(getattr(args, "layerwise_gamma_spread", 1.0)),
+        layerwise_gamma_reverse=bool(getattr(args, "layerwise_gamma_reverse", False)),
     )
     model = AnamnesisModel(config)
     override_retention_gamma(model, args.retention_gamma)
@@ -740,6 +741,8 @@ def parse_args() -> argparse.Namespace:
                         help="Shift gamma range per layer: shallow=short memory, deep=long memory.")
     parser.add_argument("--layerwise-gamma-spread", type=float, default=1.0,
                         help="Widen shallow-deep gamma contrast. 1.0=default, 1.5=moderate, 2.0=aggressive.")
+    parser.add_argument("--layerwise-gamma-reverse", action="store_true",
+                        help="Reverse schedule: shallow=long memory, deep=short memory. For hypothesis testing.")
     parser.add_argument("--use-learned-gate", action="store_true",
                         help="Use learned token gate instead of MARK_THOUGHT for TCB selection.")
     parser.add_argument("--use-engram-tcb-trigger", action="store_true",
