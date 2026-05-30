@@ -671,14 +671,80 @@ Requires new implementation: multi-needle data generation, multi-label retriever
 top-K retrieval, and evaluation of multi-hop reasoning over retrieved chunks.
 Not yet implemented — documented as next milestone.
 
-**Key finding**: Scalar-gated Engram improves LM PPL by 22%. This validates Proof 40's
-prediction that initial perturbation is O(s·e^b) ≈ 10⁻⁵ (negligible). The Engram's static
-hash tables provide useful prior knowledge for character-level language modeling.
+### Phase 5.9: Layerwise Gamma + Head Count Optimization
 
-**Architectural implication**: Engram can stay as an integrated component. No strict
-external separation needed for the base model. The architecture is now:
-- **AnamnesisModel** = RetNet + scalar-gated Engram + AttnRes (integrated)
-- **External pipeline** = Chunk retriever for ultra-long context (still needed for 1M)
+**Hypothesis**: RetNet layers should have different memory lengths — shallow layers focus on
+local features (low gamma), deep layers maintain global context (high gamma). More heads
+provide diverse temporal channels that benefit from this specialization.
+
+**Layerwise gamma schedule** (zero extra parameters):
+- Layer 0 (depth=0.0): gamma ∈ [0.875, 0.969] — short memory (~8-32 tokens)
+- Layer 4 (depth=0.57): gamma ∈ [0.974, 0.994] — medium memory
+- Layer 7 (depth=1.0): gamma ∈ [0.992, 0.998] — long memory (~125-512 tokens)
+
+**Synthetic task results** (d=64, 8 layers, seed=42, 200 steps):
+
+| Config | XOR@512 eval_loss | Δ |
+|--------|-------------------|---|
+| 4×16 baseline | 0.109 | — |
+| 4×16 + layerwise | 0.090 | -18% |
+| 8×8 no layerwise | 0.076 | -30% |
+| **8×8 + layerwise** | **0.062** | **-43%** |
+
+Effects are additive on XOR: expected 0.063, actual 0.062. Nearly perfect.
+
+XOR@2048: 3x faster convergence, monotonic (no loss spikes).
+Needle@1024: EM=1.0 at step 160 for all variants (neutral, already solved).
+
+**Shakespeare char-level LM** (d=128, 8 layers, Engram, sinusoidal PE, 2000 steps):
+
+Full 2×2 factorial ablation:
+
+| | 4 heads | 8 heads |
+|--|---------|---------|
+| No layerwise | 7.70 | 7.78 (+1%) |
+| **Layerwise** | **6.19** | **5.77** |
+
+**Critical finding**: Layerwise gamma is the dominant factor (-20% alone with 4 heads).
+8 heads alone is neutral (+1%), but amplifies layerwise to -25% (synergistic, NOT additive).
+
+Why: Layerwise gamma specializes layers — shallow=short memory for local features,
+deep=long memory for global context. 8 heads provide diverse channels for each
+specialization. Without layerwise, 8 smaller heads (state 8×16²=2048 vs 4×32²=4096)
+can't compensate for reduced per-head capacity.
+
+**Comparison with baselines**:
+- Transformer d=128: val_ppl=9.78
+- Transformer d=256: val_ppl=5.71
+- Anamnesis 4h+layerwise d=128: **6.19** (-37% vs Transformer d=128)
+- Anamnesis 8h+layerwise d=128: **5.77** (matches Transformer d=256 at half width!)
+
+**Gamma spread sweep** (XOR@512, 8h+layerwise):
+- spread=0.7: eval_loss=0.093 (-15%, oscillating)
+- **spread=1.0: eval_loss=0.090 (-18%)** ← optimal
+- spread=1.5: eval_loss=0.107 (-2%)
+
+**Discarded mechanisms** (Rounds 1-6, all WORSE or NEUTRAL on d=64):
+- Input-dependent gamma: neutral (extra params not worth it)
+- Input-dependent write gate: hurts long-range
+- SwiGLU FFN: worse on small models
+- Cosine LR: worse for short training
+- Learnable gamma: weight decay kills it (eval_loss 0.261 vs 0.030)
+- 2 heads: +81% worse
+
+**Key insight**: Small models benefit from **inductive bias** (layerwise gamma, head count),
+not from **extra parameters** (IDG, SwiGLU, learnable gamma). The improvement comes from
+better utilization of existing parameters through temporal specialization.
+
+**Architectural implication**: Default config should use 8 heads + layerwise gamma.
+The architecture is now:
+- **AnamnesisModel** = RetNet (8 heads, layerwise gamma) + scalar-gated Engram
+- **External pipeline** = Chunk retriever for ultra-long context (1M tokens)
+
+### Phase 5.10: Multi-Seed Validation (Planned)
+
+Need 3-seed validation (42, 100, 200) for 8h+layerwise config on Shakespeare.
+Required for paper credibility — previous results (Phase 5.4) used 3 seeds.
 
 ## Autonomous Research Loop
 
