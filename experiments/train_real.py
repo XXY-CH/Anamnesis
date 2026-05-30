@@ -243,6 +243,8 @@ def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel | T
         engram_hash_heads=args.engram_hash_heads,
         engram_use_conv=args.engram_use_conv,
         engram_vector_gate=args.engram_vector_gate,
+        layerwise_gamma=bool(getattr(args, "layerwise_gamma", False)),
+        layerwise_gamma_spread=float(getattr(args, "layerwise_gamma_spread", 1.0)),
     )
     return AnamnesisModel(config)
 
@@ -424,6 +426,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seq-len", type=int, default=512)
     p.add_argument("--position-encoding", choices=["learned", "sinusoidal"], default="sinusoidal")
     p.add_argument("--input-dependent-gamma", action="store_true")
+    p.add_argument("--layerwise-gamma", action="store_true",
+                   help="Shift gamma range per layer: shallow=short memory, deep=long memory.")
+    p.add_argument("--layerwise-gamma-spread", type=float, default=1.0,
+                   help="Widen shallow-deep gamma contrast (1.0=default).")
     p.add_argument("--use-milestones", action="store_true")
     p.add_argument("--use-token-copy-buffer", action="store_true")
     p.add_argument("--attnres-every", type=int, default=4)
