@@ -538,6 +538,11 @@ def run_variant(
     device = torch.device(args.device)
     model = build_model(args, variant, args.vocab_size).to(device)
     optimizer = build_optimizer(args, model)
+    scheduler = None
+    if getattr(args, "cosine_lr", False):
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=args.steps, eta_min=args.learning_rate * 0.01,
+        )
     rows: list[dict[str, float | int | str]] = []
 
     for step in range(1, args.steps + 1):
@@ -566,6 +571,8 @@ def run_variant(
         loss.backward()
         clip_gradients(args, model, optimizer)
         optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         if step == 1 or step % args.log_interval == 0 or step == args.steps:
             row: dict[str, float | int | str] = {
@@ -722,6 +729,8 @@ def parse_args() -> argparse.Namespace:
                         help="Add input-dependent write gate: scale k^T v by per-position gate.")
     parser.add_argument("--use-swiglu", action="store_true",
                         help="Use SwiGLU FFN instead of standard FFN.")
+    parser.add_argument("--cosine-lr", action="store_true",
+                        help="Use cosine LR schedule (decay to 1%% of initial LR).")
     parser.add_argument("--use-learned-gate", action="store_true",
                         help="Use learned token gate instead of MARK_THOUGHT for TCB selection.")
     parser.add_argument("--use-engram-tcb-trigger", action="store_true",
