@@ -317,6 +317,8 @@ def main():
                         help="Enable Engram layer in model (improves chunk embeddings)")
     parser.add_argument("--attnres-every", type=int, default=0,
                         help="Enable AttnRes every N layers (0=disabled)")
+    parser.add_argument("--layerwise-gamma", action="store_true", default=False,
+                        help="Shift gamma range per layer depth")
     parser.add_argument("--use-chunk-rope", action="store_true", default=False)
     parser.add_argument("--proj-dim", type=int, default=None,
                         help="Projection dimension for chunk retriever (default: d_model).")
@@ -352,6 +354,7 @@ def main():
         token_copy_sinusoidal_pos=True,
         position_encoding_type="sinusoidal",
         attnres_every=args.attnres_every,
+        layerwise_gamma=bool(getattr(args, "layerwise_gamma", False)),
     )
     model = AnamnesisModel(config).to(device)
     n_params = sum(p.numel() for p in model.parameters())
