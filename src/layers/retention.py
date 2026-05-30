@@ -27,6 +27,7 @@ class RetentionLayer(nn.Module):
         input_dependent_write: bool = False,
         learnable_gamma: bool = False,
         layer_depth: float | None = None,
+        gamma_spread: float = 1.0,
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -42,7 +43,11 @@ class RetentionLayer(nn.Module):
         self.out_proj = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
 
-        self._init_decay(learnable=learnable_gamma, layer_depth=layer_depth)
+        self._init_decay(
+            learnable=learnable_gamma,
+            layer_depth=layer_depth,
+            gamma_spread=gamma_spread,
+        )
 
         if input_dependent_gamma:
             self.gamma_proj = nn.Linear(d_model, n_heads, bias=True)
@@ -59,7 +64,10 @@ class RetentionLayer(nn.Module):
                 nn.init.constant_(self.write_proj.bias, 2.0)
 
     def _init_decay(
-        self, learnable: bool = False, layer_depth: float | None = None
+        self,
+        learnable: bool = False,
+        layer_depth: float | None = None,
+        gamma_spread: float = 1.0,
     ) -> None:
         """Initialize per-head decay rates below one.
 
@@ -70,6 +78,10 @@ class RetentionLayer(nn.Module):
                          shifts gamma range: shallow layers get lower gamma
                          (short memory, local features), deep layers get higher
                          gamma (long memory, global context). None = uniform init.
+            gamma_spread: Widens the shallow-deep gamma contrast when > 1.0.
+                          Shallow layers get lower gamma (÷spread), deep layers
+                          get higher gamma (×spread). Only used with layerwise.
+                          1.0 = current behavior, 1.5 = moderate, 2.0 = aggressive.
         """
         if self.n_heads == 1:
             gamma = torch.tensor([1 - 2**-5], dtype=torch.float32)
@@ -80,20 +92,25 @@ class RetentionLayer(nn.Module):
 
             if layer_depth is not None:
                 # Layerwise schedule: shift range based on depth.
-                # Shallow (depth→0): log(1/8) to log(1/32) → gamma ∈ [0.875, 0.969]
-                # Deep   (depth→1): log(1/128) to log(1/512) → gamma ∈ [0.992, 0.998]
-                shallow_log_min = torch.log(
+                # Base: shallow [log(1/8), log(1/32)], deep [log(1/128), log(1/512)]
+                # With gamma_spread: shallow logs ÷ spread, deep logs × spread
+                base_shallow_log_min = torch.log(
                     torch.tensor(1 / 8, dtype=torch.float32)
                 )
-                shallow_log_max = torch.log(
+                base_shallow_log_max = torch.log(
                     torch.tensor(1 / 32, dtype=torch.float32)
                 )
-                deep_log_min = torch.log(
+                base_deep_log_min = torch.log(
                     torch.tensor(1 / 128, dtype=torch.float32)
                 )
-                deep_log_max = torch.log(
+                base_deep_log_max = torch.log(
                     torch.tensor(1 / 512, dtype=torch.float32)
                 )
+                # Apply spread: shallow gets shorter memory, deep gets longer
+                shallow_log_min = base_shallow_log_min / gamma_spread
+                shallow_log_max = base_shallow_log_max / gamma_spread
+                deep_log_min = base_deep_log_min * gamma_spread
+                deep_log_max = base_deep_log_max * gamma_spread
                 d = layer_depth
                 log_min = shallow_log_min * (1 - d) + deep_log_min * d
                 log_max = shallow_log_max * (1 - d) + deep_log_max * d

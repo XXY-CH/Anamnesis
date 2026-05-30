@@ -65,6 +65,7 @@ class AnamnesisConfig:
     use_swiglu: bool = False
     learnable_gamma: bool = False
     layerwise_gamma: bool = False
+    layerwise_gamma_spread: float = 1.0
 
 
 def sinusoidal_encoding(
@@ -116,6 +117,7 @@ class AnamnesisLayer(nn.Module):
                 if config.layerwise_gamma
                 else None
             ),
+            gamma_spread=config.layerwise_gamma_spread,
         )
 
         self.ffn_norm = nn.RMSNorm(config.d_model)
