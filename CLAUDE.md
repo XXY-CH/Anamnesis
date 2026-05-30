@@ -815,6 +815,23 @@ actual = -37%. All three factors (8h+layerwise+Engram) give -41%.
 Best efficiency point: d=128 8h+lw achieves better PPL than d=256 Transformer
 at 9% higher throughput. The optimal quality-speed tradeoff.
 
+### Phase 5.14: 1M Retrieval with 8h+layerwise (COMPLETE)
+
+**8h+layerwise + Engram achieves EM=1.000 at 1M tokens** (2048 chunks).
+
+Scaling results (d=64, proj_dim=256, 8 eval batches, seed=42):
+
+| Length | Chunks | Best EM | Best Temp |
+|--------|--------|---------|-----------|
+| 131K | 256 | 1.000 | 1.0 |
+| 262K | 512 | 1.000 | 1.0 |
+| 524K | 1024 | 1.000 | 0.1 |
+| **1M** | **2048** | **1.000** | **0.5** |
+
+Previous best (Phase 4, 4h Engram): EM=1.0 at 1M.
+8h+layerwise matches while also improving LM by 30% (5.54 vs 7.91 PPL).
+**Double win**: better language model AND perfect retrieval at 1M tokens.
+
 ## Autonomous Research Loop
 
 ### Objective
