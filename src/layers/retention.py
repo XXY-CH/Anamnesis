@@ -25,6 +25,7 @@ class RetentionLayer(nn.Module):
         dropout: float = 0.0,
         input_dependent_gamma: bool = False,
         input_dependent_write: bool = False,
+        learnable_gamma: bool = False,
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -40,7 +41,7 @@ class RetentionLayer(nn.Module):
         self.out_proj = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
 
-        self._init_decay()
+        self._init_decay(learnable=learnable_gamma)
 
         if input_dependent_gamma:
             self.gamma_proj = nn.Linear(d_model, n_heads, bias=True)
@@ -56,8 +57,13 @@ class RetentionLayer(nn.Module):
                 nn.init.zeros_(self.write_proj.weight)
                 nn.init.constant_(self.write_proj.bias, 2.0)
 
-    def _init_decay(self) -> None:
-        """Initialize fixed RetNet-style per-head decay rates below one."""
+    def _init_decay(self, learnable: bool = False) -> None:
+        """Initialize per-head decay rates below one.
+
+        Args:
+            learnable: If True, gamma is an nn.Parameter (optimized by AdamW).
+                       If False, gamma is a fixed buffer (never updated).
+        """
         if self.n_heads == 1:
             gamma = torch.tensor([1 - 2**-5], dtype=torch.float32)
         else:
@@ -68,7 +74,10 @@ class RetentionLayer(nn.Module):
                     self.n_heads,
                 )
             )
-        self.register_buffer("gamma", gamma)
+        if learnable:
+            self.gamma = nn.Parameter(gamma)
+        else:
+            self.register_buffer("gamma", gamma)
 
     def _compute_dynamic_gamma(self, x: torch.Tensor) -> torch.Tensor:
         return torch.sigmoid(self.gamma_proj(x))

@@ -342,6 +342,7 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         use_learned_gate=bool(getattr(args, "use_learned_gate", False)),
         use_engram_tcb_trigger=bool(getattr(args, "use_engram_tcb_trigger", False)),
         use_swiglu=bool(getattr(args, "use_swiglu", False)),
+        learnable_gamma=bool(getattr(args, "learnable_gamma", False)),
     )
     model = AnamnesisModel(config)
     override_retention_gamma(model, args.retention_gamma)
@@ -731,6 +732,8 @@ def parse_args() -> argparse.Namespace:
                         help="Use SwiGLU FFN instead of standard FFN.")
     parser.add_argument("--cosine-lr", action="store_true",
                         help="Use cosine LR schedule (decay to 1%% of initial LR).")
+    parser.add_argument("--learnable-gamma", action="store_true",
+                        help="Make retention decay gamma a learnable parameter.")
     parser.add_argument("--use-learned-gate", action="store_true",
                         help="Use learned token gate instead of MARK_THOUGHT for TCB selection.")
     parser.add_argument("--use-engram-tcb-trigger", action="store_true",

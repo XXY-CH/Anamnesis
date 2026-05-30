@@ -63,6 +63,7 @@ class AnamnesisConfig:
     use_learned_gate: bool = False
     use_engram_tcb_trigger: bool = False
     use_swiglu: bool = False
+    learnable_gamma: bool = False
 
 
 def sinusoidal_encoding(
@@ -108,6 +109,7 @@ class AnamnesisLayer(nn.Module):
             dropout=config.dropout,
             input_dependent_gamma=config.input_dependent_gamma,
             input_dependent_write=config.input_dependent_write,
+            learnable_gamma=config.learnable_gamma,
         )
 
         self.ffn_norm = nn.RMSNorm(config.d_model)
