@@ -40,7 +40,7 @@ analysis/figures_v2/
 
 # Temporary extraction/build artifacts
 tmp/
-docs/tmp/
+docs/
 *.aux
 *.bbl
 *.blg

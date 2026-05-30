@@ -269,7 +269,7 @@ If Anamnesis contributes to your academic research, please cite our repository u
 ```bibtex
 @software{xie_2026_anamnesis,
   author = {Xie, Xingyu},
-  title = {Anamnesis: A Proof-Aligned PyTorch Research Scaffold for Budgeted Long-Context Memory},
+  title = {A Conditional Small-State Memory Architecture for Efficient Long-Context Reasoning},
   year = {2026},
   doi = {10.5281/zenodo.20041183},
   url = {https://github.com/XXY-CH/Anamnesis},
