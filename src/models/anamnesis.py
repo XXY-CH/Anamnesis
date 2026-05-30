@@ -62,6 +62,7 @@ class AnamnesisConfig:
     input_dependent_write: bool = False
     use_learned_gate: bool = False
     use_engram_tcb_trigger: bool = False
+    use_swiglu: bool = False
 
 
 def sinusoidal_encoding(
@@ -110,12 +111,21 @@ class AnamnesisLayer(nn.Module):
         )
 
         self.ffn_norm = nn.RMSNorm(config.d_model)
-        self.ffn = nn.Sequential(
-            nn.Linear(config.d_model, d_ff),
-            nn.SiLU(),
-            nn.Dropout(config.dropout),
-            nn.Linear(d_ff, config.d_model),
-        )
+        if config.use_swiglu:
+            self.ffn = nn.ModuleDict({
+                "gate": nn.Linear(config.d_model, d_ff, bias=False),
+                "up": nn.Linear(config.d_model, d_ff, bias=False),
+                "out": nn.Linear(d_ff, config.d_model, bias=False),
+                "drop": nn.Dropout(config.dropout),
+            })
+        else:
+            self.ffn = nn.Sequential(
+                nn.Linear(config.d_model, d_ff),
+                nn.SiLU(),
+                nn.Dropout(config.dropout),
+                nn.Linear(d_ff, config.d_model),
+            )
+        self._use_swiglu = config.use_swiglu
 
         self.engram = (
             HashedNgramEngram(
@@ -153,6 +163,15 @@ class AnamnesisLayer(nn.Module):
             nn.init.zeros_(self.retention_output_gate.weight)
             nn.init.constant_(self.retention_output_gate.bias, 2.0)
 
+    def _ffn_forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self._use_swiglu:
+            return self.ffn["out"](
+                self.ffn["drop"](
+                    F.silu(self.ffn["gate"](x)) * self.ffn["up"](x)
+                )
+            )
+        return self.ffn(x)
+
     def forward(
         self,
         x: torch.Tensor,
@@ -176,7 +195,7 @@ class AnamnesisLayer(nn.Module):
                 self.retention_output_gate(u)
             )
 
-        ffn_out = self.ffn(self.ffn_norm(x))
+        ffn_out = self._ffn_forward(self.ffn_norm(x))
         x = x + retention_out + ffn_out
 
         if self.engram is not None and not disable_engram:
@@ -504,7 +523,7 @@ class AnamnesisModel(nn.Module):
                         layer.retention_output_gate(u)
                     )
 
-                ffn_out = layer.ffn(layer.ffn_norm(x))
+                ffn_out = layer._ffn_forward(layer.ffn_norm(x))
                 x = x + ret_out + ffn_out
 
                 if layer.engram is not None and not disable_engram:
@@ -628,7 +647,7 @@ class AnamnesisModel(nn.Module):
                     layer.retention_output_gate(u)
                 )
 
-            ffn_out = layer.ffn(layer.ffn_norm(x))
+            ffn_out = layer._ffn_forward(layer.ffn_norm(x))
             x = x + ret_out + ffn_out
 
             if layer.engram is not None:

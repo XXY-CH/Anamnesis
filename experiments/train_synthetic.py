@@ -341,6 +341,7 @@ def build_model(args: argparse.Namespace, variant: str, vocab_size: int):
         input_dependent_write=bool(getattr(args, "input_dependent_write", False)),
         use_learned_gate=bool(getattr(args, "use_learned_gate", False)),
         use_engram_tcb_trigger=bool(getattr(args, "use_engram_tcb_trigger", False)),
+        use_swiglu=bool(getattr(args, "use_swiglu", False)),
     )
     model = AnamnesisModel(config)
     override_retention_gamma(model, args.retention_gamma)
@@ -719,6 +720,8 @@ def parse_args() -> argparse.Namespace:
                         help="Add input-dependent output gate to retention (like Mamba).")
     parser.add_argument("--input-dependent-write", action="store_true",
                         help="Add input-dependent write gate: scale k^T v by per-position gate.")
+    parser.add_argument("--use-swiglu", action="store_true",
+                        help="Use SwiGLU FFN instead of standard FFN.")
     parser.add_argument("--use-learned-gate", action="store_true",
                         help="Use learned token gate instead of MARK_THOUGHT for TCB selection.")
     parser.add_argument("--use-engram-tcb-trigger", action="store_true",
