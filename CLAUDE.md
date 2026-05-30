@@ -772,6 +772,18 @@ Layerwise gamma improves RetNet **with and without** Engram. The -15% improvemen
 on bare RetNet proves the mechanism is fundamental to the retention architecture,
 not dependent on the Engram hash tables. Engram amplifies the effect (-15% → -20%).
 
+**Complete ablation matrix** (Shakespeare d=128, 2000 steps, seed=42):
+
+| | No Layerwise | Layerwise |
+|--|-------------|-----------|
+| Bare RetNet 4h | 9.78 | 8.71 (-11%) |
+| Bare RetNet 8h | — | 8.31 (-15%) |
+| Engram 4h | 7.70 | 6.19 (-20%) |
+| Engram 8h | 7.78 | 5.77 (-26%) |
+
+Effects are super-additive: layerwise (-11%) + Engram (-21%) = -32% expected,
+actual = -37%. All three factors (8h+layerwise+Engram) give -41%.
+
 ### Phase 5.12: d=256 Scaling (COMPLETE)
 
 **8h+layerwise beats Transformer at all scales** (Shakespeare, seed=42, 2000 steps):
