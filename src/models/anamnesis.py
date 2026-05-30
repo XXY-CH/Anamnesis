@@ -64,6 +64,7 @@ class AnamnesisConfig:
     use_engram_tcb_trigger: bool = False
     use_swiglu: bool = False
     learnable_gamma: bool = False
+    layerwise_gamma: bool = False
 
 
 def sinusoidal_encoding(
@@ -110,6 +111,11 @@ class AnamnesisLayer(nn.Module):
             input_dependent_gamma=config.input_dependent_gamma,
             input_dependent_write=config.input_dependent_write,
             learnable_gamma=config.learnable_gamma,
+            layer_depth=(
+                layer_idx / max(config.n_layers - 1, 1)
+                if config.layerwise_gamma
+                else None
+            ),
         )
 
         self.ffn_norm = nn.RMSNorm(config.d_model)

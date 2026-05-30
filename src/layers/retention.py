@@ -26,6 +26,7 @@ class RetentionLayer(nn.Module):
         input_dependent_gamma: bool = False,
         input_dependent_write: bool = False,
         learnable_gamma: bool = False,
+        layer_depth: float | None = None,
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -41,7 +42,7 @@ class RetentionLayer(nn.Module):
         self.out_proj = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
 
-        self._init_decay(learnable=learnable_gamma)
+        self._init_decay(learnable=learnable_gamma, layer_depth=layer_depth)
 
         if input_dependent_gamma:
             self.gamma_proj = nn.Linear(d_model, n_heads, bias=True)
@@ -57,22 +58,48 @@ class RetentionLayer(nn.Module):
                 nn.init.zeros_(self.write_proj.weight)
                 nn.init.constant_(self.write_proj.bias, 2.0)
 
-    def _init_decay(self, learnable: bool = False) -> None:
+    def _init_decay(
+        self, learnable: bool = False, layer_depth: float | None = None
+    ) -> None:
         """Initialize per-head decay rates below one.
 
         Args:
             learnable: If True, gamma is an nn.Parameter (optimized by AdamW).
                        If False, gamma is a fixed buffer (never updated).
+            layer_depth: Normalized layer position [0, 1]. When provided,
+                         shifts gamma range: shallow layers get lower gamma
+                         (short memory, local features), deep layers get higher
+                         gamma (long memory, global context). None = uniform init.
         """
         if self.n_heads == 1:
             gamma = torch.tensor([1 - 2**-5], dtype=torch.float32)
         else:
-            gamma = 1 - torch.exp(
-                torch.linspace(
-                    torch.log(torch.tensor(1 / 32, dtype=torch.float32)),
-                    torch.log(torch.tensor(1 / 512, dtype=torch.float32)),
-                    self.n_heads,
+            # Default range: log(1/32) to log(1/512) → gamma ∈ [0.969, 0.998]
+            log_min = torch.log(torch.tensor(1 / 32, dtype=torch.float32))
+            log_max = torch.log(torch.tensor(1 / 512, dtype=torch.float32))
+
+            if layer_depth is not None:
+                # Layerwise schedule: shift range based on depth.
+                # Shallow (depth→0): log(1/8) to log(1/32) → gamma ∈ [0.875, 0.969]
+                # Deep   (depth→1): log(1/128) to log(1/512) → gamma ∈ [0.992, 0.998]
+                shallow_log_min = torch.log(
+                    torch.tensor(1 / 8, dtype=torch.float32)
                 )
+                shallow_log_max = torch.log(
+                    torch.tensor(1 / 32, dtype=torch.float32)
+                )
+                deep_log_min = torch.log(
+                    torch.tensor(1 / 128, dtype=torch.float32)
+                )
+                deep_log_max = torch.log(
+                    torch.tensor(1 / 512, dtype=torch.float32)
+                )
+                d = layer_depth
+                log_min = shallow_log_min * (1 - d) + deep_log_min * d
+                log_max = shallow_log_max * (1 - d) + deep_log_max * d
+
+            gamma = 1 - torch.exp(
+                torch.linspace(log_min, log_max, self.n_heads)
             )
         if learnable:
             self.gamma = nn.Parameter(gamma)
