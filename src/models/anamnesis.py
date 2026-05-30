@@ -30,7 +30,7 @@ from .recurrent_state import RecurrentState
 class AnamnesisConfig:
     vocab_size: int
     d_model: int = 128
-    n_heads: int = 4
+    n_heads: int = 8
     n_layers: int = 8
     d_ff: int | None = None
     max_seq_len: int = 2048
@@ -64,7 +64,7 @@ class AnamnesisConfig:
     use_engram_tcb_trigger: bool = False
     use_swiglu: bool = False
     learnable_gamma: bool = False
-    layerwise_gamma: bool = False
+    layerwise_gamma: bool = True
     layerwise_gamma_spread: float = 1.0
     layerwise_gamma_reverse: bool = False
 
