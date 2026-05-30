@@ -788,6 +788,21 @@ not dependent on the Engram hash tables. Engram amplifies the effect (-15% → -
 4. **Efficiency frontier**: Anamnesis d=128 achieves 5.54 PPL (same as d=256) with
    ~7.9M params vs Transformer d=256's ~6.5M params but at 37K tok/s vs 28K tok/s
 
+### Phase 5.13: Inference Speed Benchmark
+
+**MPS inference throughput** (seq_len=512, batch=1, 5 warmup + 20 measured):
+
+| Config | tok/s | Params | val_ppl |
+|--------|-------|--------|---------|
+| RetNet bare d=128 4h | 37,004 | 8.2M | 9.78 |
+| Anamnesis d=128 4h | 38,595 | 8.2M | 7.70 |
+| **Anamnesis d=128 8h+lw** | **30,304** | **8.2M** | **5.54** |
+| Anamnesis d=256 8h+lw | 27,138 | 19.6M | 5.50 |
+
+8h+layerwise is 22% slower than 4h baseline but achieves 28% better PPL.
+Best efficiency point: d=128 8h+lw achieves better PPL than d=256 Transformer
+at 9% higher throughput. The optimal quality-speed tradeoff.
+
 ## Autonomous Research Loop
 
 ### Objective
