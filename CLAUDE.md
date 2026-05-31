@@ -861,7 +861,23 @@ with T_max=2000 decays LR to near-zero by step 2000, creating the illusion of co
 
 27% improvement from longer training. Model converges at step 4500.
 
-Transformer d=256 @ 5000 steps running — needed for fair comparison.
+**Transformer d=256 @ 5000 steps: val_ppl=4.40** (seed=42, T_max=5000, 6.6M params).
+
+**Head-to-head comparison** (same seed=42, same T_max=5000):
+
+| Step | Anamnesis d=128 | Transformer d=256 | Gap |
+|------|----------------|-------------------|-----|
+| 500 | 9.56 | 11.86 | -19% |
+| 1000 | 6.27 | 7.91 | -21% |
+| 2000 | 4.67 | 5.49 | -15% |
+| 3000 | 4.29 | 4.70 | -9% |
+| **5000** | **4.07** | **4.40** | **-7.5%** |
+
+Anamnesis d=128 leads Transformer d=256 at ALL training stages.
+Gap narrows from 21% (early) to 7.5% (converged) but never closes.
+Previous 2000-step (T_max=2000) showed Transformer ahead by 1% (5.71 vs 5.77).
+**The LR schedule reversal is the strongest finding**: with matched T_max,
+Anamnesis benefits MORE from longer training.
 
 **Key insight**: All previous 2000-step comparisons are confounded by the LR schedule.
 Fair architectural comparisons must use matched T_max.
