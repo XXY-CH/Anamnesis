@@ -832,6 +832,40 @@ Previous best (Phase 4, 4h Engram): EM=1.0 at 1M.
 8h+layerwise matches while also improving LM by 30% (5.54 vs 7.91 PPL).
 **Double win**: better language model AND perfect retrieval at 1M tokens.
 
+### Phase 5.15: 5000-Step Convergence Analysis (IN PROGRESS)
+
+**Critical finding**: Models were NOT converged at 2000 steps. The cosine LR schedule
+with T_max=2000 decays LR to near-zero by step 2000, creating the illusion of convergence.
+
+**Anamnesis d=128 8h+lw+Engram (seed=42, CosineAnnealing T_max=5000)**:
+
+| Step | val_ppl | LR |
+|------|---------|------|
+| 500 | 9.56 | 2.93e-4 |
+| 1000 | 6.27 | 2.71e-4 |
+| 1500 | 4.99 | 2.38e-4 |
+| 2000 | 4.67 | 1.96e-4 |
+| 2500 | 4.44 | 1.50e-4 |
+| 3000 | 4.29 | 1.04e-4 |
+| 3500 | 4.13 | 6.18e-5 |
+| 4000 | 4.08 | 2.86e-5 |
+| 4500 | 4.07 | 7.34e-6 |
+| **5000** | **4.07** | **0.0** |
+
+**Comparison** (same seed=42, different T_max):
+
+| Config | Steps | val_ppl | Params |
+|--------|-------|---------|--------|
+| Anamnesis d=128 8h+lw+Eng | 2000 (T_max=2000) | 5.77 | 7.9M |
+| **Anamnesis d=128 8h+lw+Eng** | **5000 (T_max=5000)** | **4.07** | **7.9M** |
+
+27% improvement from longer training. Model converges at step 4500.
+
+Transformer d=256 @ 5000 steps running — needed for fair comparison.
+
+**Key insight**: All previous 2000-step comparisons are confounded by the LR schedule.
+Fair architectural comparisons must use matched T_max.
+
 ## Autonomous Research Loop
 
 ### Objective
