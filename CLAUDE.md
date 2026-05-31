@@ -882,6 +882,15 @@ Anamnesis benefits MORE from longer training.
 **Key insight**: All previous 2000-step comparisons are confounded by the LR schedule.
 Fair architectural comparisons must use matched T_max.
 
+**Multi-seed validation** (Anamnesis d=128 8h+lw+Eng, T_max=5000):
+
+| Seed | 2K-step (T_max=2K) | 5K-step (T_max=5K) | Δ | vs Transformer d=256 |
+|------|--------------------|--------------------|---|---------------------|
+| 42 | 5.77 | 4.07 | -29% | -8% |
+| **100** | **5.33** | **3.79** | **-29%** | **-14%** |
+
+Mean Anamnesis @5K: **3.93 ± 0.14**. Consistently beats Transformer d=256 (4.40).
+
 ## Autonomous Research Loop
 
 ### Objective
