@@ -226,9 +226,9 @@ def load_dataset(
         cache_path = CACHE_DIR / f"shakespeare_{split}{suffix}.txt"
         return download_text(SHAKESPEARE_URL, cache_path, max_chars)
     elif name == "wikitext103":
-        return _load_wikitext(split, "wikitext/wikitext-103-raw-v1", max_chars)
+        return _load_wikitext(split, "wikitext", "wikitext-103-raw-v1", max_chars)
     elif name == "wikitext2":
-        return _load_wikitext(split, "wikitext/wikitext-2-raw-v1", max_chars)
+        return _load_wikitext(split, "wikitext", "wikitext-2-raw-v1", max_chars)
     else:
         raise ValueError(f"Unknown dataset: {name}")
 
@@ -261,18 +261,18 @@ def _load_tinystories(split: str, max_chars: int | None = None) -> str:
     return text
 
 
-def _load_wikitext(split: str, repo: str, max_chars: int | None = None) -> str:
+def _load_wikitext(split: str, dataset: str, config: str, max_chars: int | None = None) -> str:
     """Load WikiText via HuggingFace datasets library."""
     from datasets import load_dataset as hf_load
 
     hf_split = "train" if split == "train" else "validation"
     suffix = f".{max_chars}" if max_chars else ""
-    cache_path = CACHE_DIR / f"wikitext_{split}{suffix}.txt"
+    cache_path = CACHE_DIR / f"wikitext_{config}_{split}{suffix}.txt"
     if cache_path.exists():
         return cache_path.read_text(encoding="utf-8")
 
-    print(f"Loading {repo} [{hf_split}] from HuggingFace...")
-    ds = hf_load(repo, split=hf_split, streaming=True)
+    print(f"Loading {dataset}/{config} [{hf_split}] from HuggingFace...")
+    ds = hf_load(dataset, config, split=hf_split, streaming=True)
     texts: list[str] = []
     total = 0
     for row in ds:
