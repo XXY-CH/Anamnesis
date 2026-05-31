@@ -110,6 +110,59 @@ class CharTokenizer:
         return tok
 
 
+class BPETokenizer:
+    """BPE tokenizer using HuggingFace tokenizers library.
+
+    Trains a byte-level BPE vocabulary on the training text, enabling
+    subword-level tokenization that generalizes to large-vocab scenarios.
+    """
+
+    def __init__(
+        self,
+        text: str,
+        vocab_size: int = 4096,
+    ) -> None:
+        from tokenizers import Tokenizer
+        from tokenizers.models import BPE
+        from tokenizers.trainers import BpeTrainer
+        from tokenizers.pre_tokenizers import ByteLevel
+
+        self._tokenizer = Tokenizer(BPE(unk_token="<pad>"))
+        self._tokenizer.pre_tokenizer = ByteLevel()
+        trainer = BpeTrainer(
+            vocab_size=vocab_size,
+            special_tokens=SPECIAL_TOKENS,
+            show_progress=False,
+        )
+        chunks = [text[i : i + 8192] for i in range(0, len(text), 8192)]
+        self._tokenizer.train_from_iterator(chunks, trainer=trainer)
+        self.pad_id = self._tokenizer.token_to_id("<pad>")
+        self.eos_id = self._tokenizer.token_to_id("<eos>")
+
+    @property
+    def vocab_size(self) -> int:
+        return self._tokenizer.get_vocab_size()
+
+    def encode(self, text: str) -> list[int]:
+        return self._tokenizer.encode(text).ids
+
+    def decode(self, ids: list[int]) -> str:
+        return self._tokenizer.decode(ids)
+
+    def save(self, path: Path) -> None:
+        self._tokenizer.save(str(path))
+
+    @classmethod
+    def load(cls, path: Path) -> BPETokenizer:
+        from tokenizers import Tokenizer
+
+        tok = cls.__new__(cls)
+        tok._tokenizer = Tokenizer.from_file(str(path))
+        tok.pad_id = tok._tokenizer.token_to_id("<pad>")
+        tok.eos_id = tok._tokenizer.token_to_id("<eos>")
+        return tok
+
+
 # ---------------------------------------------------------------------------
 # Dataset
 # ---------------------------------------------------------------------------
@@ -172,6 +225,10 @@ def load_dataset(
         suffix = f".{max_chars}" if max_chars else ""
         cache_path = CACHE_DIR / f"shakespeare_{split}{suffix}.txt"
         return download_text(SHAKESPEARE_URL, cache_path, max_chars)
+    elif name == "wikitext103":
+        return _load_wikitext(split, "wikitext/wikitext-103-raw-v1", max_chars)
+    elif name == "wikitext2":
+        return _load_wikitext(split, "wikitext/wikitext-2-raw-v1", max_chars)
     else:
         raise ValueError(f"Unknown dataset: {name}")
 
@@ -188,6 +245,34 @@ def _load_tinystories(split: str, max_chars: int | None = None) -> str:
 
     print(f"Loading TinyStories [{hf_split}] from HuggingFace...")
     ds = hf_load("roneneldan/TinyStories", split=hf_split, streaming=True)
+    texts: list[str] = []
+    total = 0
+    for row in ds:
+        texts.append(row["text"])
+        total += len(row["text"])
+        if max_chars and total >= max_chars:
+            break
+    text = "\n".join(texts)
+    if max_chars:
+        text = text[:max_chars]
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(text, encoding="utf-8")
+    print(f"Cached {len(text)} chars to {cache_path}")
+    return text
+
+
+def _load_wikitext(split: str, repo: str, max_chars: int | None = None) -> str:
+    """Load WikiText via HuggingFace datasets library."""
+    from datasets import load_dataset as hf_load
+
+    hf_split = "train" if split == "train" else "validation"
+    suffix = f".{max_chars}" if max_chars else ""
+    cache_path = CACHE_DIR / f"wikitext_{split}{suffix}.txt"
+    if cache_path.exists():
+        return cache_path.read_text(encoding="utf-8")
+
+    print(f"Loading {repo} [{hf_split}] from HuggingFace...")
+    ds = hf_load(repo, split=hf_split, streaming=True)
     texts: list[str] = []
     total = 0
     for row in ds:
@@ -286,7 +371,13 @@ def train(args: argparse.Namespace) -> None:
     train_text = load_dataset(args.dataset, "train", args.max_train_chars)
     valid_text = load_dataset(args.dataset, "valid", args.max_valid_chars)
 
-    tokenizer = WordTokenizer(train_text) if args.tokenizer == "word" else CharTokenizer(train_text)
+    tokenizer = (
+        BPETokenizer(train_text, vocab_size=args.bpe_vocab_size)
+        if args.tokenizer == "bpe"
+        else WordTokenizer(train_text)
+        if args.tokenizer == "word"
+        else CharTokenizer(train_text)
+    )
     tok_path = Path(args.output_dir) / "tokenizer.json"
     tok_path.parent.mkdir(parents=True, exist_ok=True)
     tokenizer.save(tok_path)
@@ -412,8 +503,10 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Real-data LM training")
 
     p.add_argument("--model-type", choices=["anamnesis", "transformer"], default="anamnesis")
-    p.add_argument("--tokenizer", choices=["char", "word"], default="char")
-    p.add_argument("--dataset", choices=["tinystories", "shakespeare"], default="tinystories")
+    p.add_argument("--tokenizer", choices=["char", "word", "bpe"], default="char")
+    p.add_argument("--bpe-vocab-size", type=int, default=4096,
+                   help="BPE vocabulary size (only used with --tokenizer bpe).")
+    p.add_argument("--dataset", choices=["tinystories", "shakespeare", "wikitext103", "wikitext2"], default="tinystories")
     p.add_argument("--max-train-chars", type=int, default=10_000_000)
     p.add_argument("--max-valid-chars", type=int, default=500_000)
     p.add_argument("--output-dir", type=str, default="experiments/results/real")
