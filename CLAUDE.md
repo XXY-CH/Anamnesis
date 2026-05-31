@@ -891,6 +891,22 @@ Fair architectural comparisons must use matched T_max.
 
 Mean Anamnesis @5K: **3.93 ± 0.14**. Consistently beats Transformer d=256 (4.40).
 
+**Same d_model comparison** (all seed=42, T_max=5000):
+
+| Model | d_model | Params | 5K val_ppl |
+|-------|---------|--------|------------|
+| **Anamnesis (s100)** | **128** | 7.9M | **3.79** |
+| **Anamnesis (s42)** | **128** | 7.9M | **4.07** |
+| Transformer d=256 | 256 | 6.6M | 4.40 |
+| Transformer d=128 | 128 | 1.7M | 5.12 |
+
+Anamnesis d=128 beats Transformer d=128 by **20-26%** at same d_model.
+Anamnesis d=128 also beats Transformer d=256 by **8-14%** at double width.
+
+Note: Anamnesis has more total params (7.9M vs 1.7M) due to Engram hash tables (6.3M).
+These are O(1) scalar-gated lookups — compute remains d=128 level.
+Framing: "compute-light, storage-heavy" Pareto frontier.
+
 ## Autonomous Research Loop
 
 ### Objective
