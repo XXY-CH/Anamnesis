@@ -907,6 +907,35 @@ Note: Anamnesis has more total params (7.9M vs 1.7M) due to Engram hash tables (
 These are O(1) scalar-gated lookups — compute remains d=128 level.
 Framing: "compute-light, storage-heavy" Pareto frontier.
 
+### Phase 5.16: BPE Subword Tokenization — Engram Scalability Limit (COMPLETE)
+
+**BPE WikiText-2 @ 5000 steps** (vocab=4096, seq_len=512, seed=42, T_max=5000):
+
+| Model | val_ppl |
+|-------|---------|
+| **Transformer d=128** | **122.67** |
+| Bare RetNet 8h+lw | running |
+| Anamnesis (8h+lw+Engram) | 183.84 |
+
+**CRITICAL: Engram HURTS on large-vocab BPE.** Transformer wins by 33%.
+
+**Root cause**: Hash collision at scale. With BPE vocab=4096, the 3-gram space is
+4096³ ≈ 69 billion, but only 8192 hash slots available. Collision rate renders
+the Engram lookup noisy rather than helpful.
+
+| Tokenizer | Vocab | 3-gram space | Slots | Collision rate | Engram effect |
+|-----------|-------|-------------|-------|---------------|---------------|
+| Char (Shakespeare) | 67 | 300K | 8192 | Low (~2.7%) | **Helps -22%** |
+| BPE (WikiText-2) | 4096 | 69B | 8192 | Extreme (~99.99%) | **Hurts +33%** |
+
+**Implication**: Engram's benefit is limited to small-vocab scenarios. For BPE/subword:
+1. Increase `engram_slots` proportionally to vocab size (e.g., 64K-256K for BPE)
+2. Or reduce `engram_max_ngram` (2-gram or 1-gram)
+3. Engram must be optional — only enable when collision rate is manageable
+
+**The 8h+layerwise RetNet architecture itself may still be competitive without Engram.**
+Bare RetNet BPE experiment running to decompose the effect.
+
 ## Autonomous Research Loop
 
 ### Objective
