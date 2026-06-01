@@ -19,6 +19,7 @@ from torch.utils.data import Dataset, DataLoader
 from src.models import AnamnesisModel
 from src.models.anamnesis import AnamnesisConfig
 from src.models.transformer_baseline import TransformerConfig, TransformerLM
+from src.models.linear_attention import LinearAttentionModel
 
 CACHE_DIR = Path("experiments/data")
 
@@ -293,7 +294,7 @@ def _load_wikitext(split: str, dataset: str, config: str, max_chars: int | None 
 # Model construction
 # ---------------------------------------------------------------------------
 
-def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel | TransformerLM:
+def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel | TransformerLM | LinearAttentionModel:
     if getattr(args, "model_type", "anamnesis") == "transformer":
         config = TransformerConfig(
             vocab_size=vocab_size,
@@ -305,6 +306,15 @@ def build_model(args: argparse.Namespace, vocab_size: int) -> AnamnesisModel | T
             dropout=args.dropout,
         )
         return TransformerLM(config)
+
+    if getattr(args, "model_type", "anamnesis") == "linear_attention":
+        return LinearAttentionModel(
+            vocab_size=vocab_size,
+            d_model=args.d_model,
+            n_heads=args.n_heads,
+            n_layers=args.n_layers,
+            d_ff=args.d_ff or args.d_model * 4,
+        )
 
     config = AnamnesisConfig(
         vocab_size=vocab_size,
@@ -502,7 +512,7 @@ def train(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Real-data LM training")
 
-    p.add_argument("--model-type", choices=["anamnesis", "transformer"], default="anamnesis")
+    p.add_argument("--model-type", choices=["anamnesis", "transformer", "linear_attention"], default="anamnesis")
     p.add_argument("--tokenizer", choices=["char", "word", "bpe"], default="char")
     p.add_argument("--bpe-vocab-size", type=int, default=4096,
                    help="BPE vocabulary size (only used with --tokenizer bpe).")

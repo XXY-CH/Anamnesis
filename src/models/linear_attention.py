@@ -94,11 +94,11 @@ class LinearAttentionModel(nn.Module):
     def _init_weights(self):
         for module in self.modules():
             if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight, std=0.02)
+                torch.nn.init.normal_(module.weight, std=0.02)
                 if module.bias is not None:
-                    nn.zeros_(module.bias)
+                    torch.nn.init.zeros_(module.bias)
             elif isinstance(module, nn.Embedding):
-                nn.init.normal_(module.weight, std=0.02)
+                torch.nn.init.normal_(module.weight, std=0.02)
 
     def forward(self, idx: torch.Tensor) -> torch.Tensor:
         B, L = idx.shape
