@@ -1195,6 +1195,11 @@ d=256:
 
 Anamnesis beats Transformer by **18.8% at d=128** (4.07 vs 5.01, non-overlapping CIs)
 and **14.0% at d=256** (3.51 vs 4.08).
+
+**Linear Attention baseline** (Katharopoulos 2020): val_ppl=10.39 at d=128, 5K steps —
+103% worse than Transformer, 155% worse than Anamnesis. Proves not all O(N) models are
+equal: RetNet retention >> ELU linear attention. Anamnesis = O(1) inference + best quality.
+
 Anamnesis variance is 1.5x lower at d=256 (0.27 vs 0.40) — more stable training.
 
 **BPE max_ngram=2 — DISCARDED.** Worse than max_ngram=3 (215 vs 184). Fewer tables (8 vs 12)
