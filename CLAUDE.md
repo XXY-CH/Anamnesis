@@ -914,7 +914,7 @@ Framing: "compute-light, storage-heavy" Pareto frontier.
 | Model | val_ppl |
 |-------|---------|
 | **Transformer d=128** | **122.67** |
-| Bare RetNet 8h+lw | running |
+| Bare RetNet 8h+lw | 171.23 |
 | Anamnesis (8h+lw+Engram) | 183.84 |
 
 **CRITICAL: Engram HURTS on large-vocab BPE.** Transformer wins by 33%.
@@ -935,6 +935,18 @@ the Engram lookup noisy rather than helpful.
 
 **The 8h+layerwise RetNet architecture itself may still be competitive without Engram.**
 Bare RetNet BPE experiment running to decompose the effect.
+
+**Decomposition** (all BPE WikiText-2, d=128, 5K steps, seed=42):
+
+| Component | val_ppl | Effect |
+|-----------|---------|--------|
+| Transformer (baseline) | 122.67 | — |
+| - RetNet (8h+lw) | 171.23 | -28% (arch penalty) |
+| - + Engram | 183.84 | -7% (collision penalty) |
+
+RetNet's recurrent mechanism trades expressivity for O(1) inference. This tradeoff
+favors small-vocab tasks (local n-gram patterns) but hurts on large-vocab BPE where
+full attention's global context matters more.
 
 ## Autonomous Research Loop
 
