@@ -1104,6 +1104,30 @@ but the base model is already much stronger (5.57 vs 9.78 at baseline).
 (5.12). Layerwise gamma is essential to make RetNet competitive with Transformer.
 At d=256, layerwise gamma alone (4.31) beats Transformer d=256 (4.40) by 2%.
 
+### Phase 5.21: Transformer d=256 Multi-Seed — High Variance Warning (COMPLETE)
+
+**Transformer d=256 seed=100, T_max=5000: val_ppl=3.61**
+
+This is dramatically better than seed=42 (4.40), revealing high seed sensitivity.
+
+**Updated multi-seed comparison at d=256:**
+
+| Model | seed=42 | seed=100 | Mean ± Std |
+|-------|---------|----------|------------|
+| Anamnesis | 3.44 | 3.23 | **3.34 ± 0.15** |
+| Transformer | 4.40 | **3.61** | **4.01 ± 0.56** |
+| Bare RetNet 8h+lw | 4.31 | — | 4.31 |
+
+**Transformer variance is 3.7x higher than Anamnesis** (0.56 vs 0.15).
+Shakespeare's small dataset (~5M chars) amplifies initialization sensitivity.
+
+**Revised advantage**: Anamnesis d=256 beats Transformer d=256 by **16.5%** (3.34 vs 4.01).
+Previous estimate (24%) used only seed=42 Transformer which is pessimistic.
+
+**Implication for paper**: Report both seeds honestly. Emphasize that Anamnesis
+has much more stable training (3.7x lower variance). Consider running 3-5 seeds
+for definitive statistical claims. The advantage at d=128 (23%) is unchanged.
+
 ## Autonomous Research Loop
 
 ### Objective
