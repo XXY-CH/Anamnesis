@@ -991,6 +991,37 @@ Bare RetNet 8h+lw alone is still 23% worse than Transformer d=128. Engram revers
 this gap, making Anamnesis 20% better. Layerwise gamma closes the RetNet gap by half
 (48%→23%), Engram closes the rest and surpasses Transformer.
 
+### Phase 5.18: Anamnesis d=256 @ 5K Steps (COMPLETE)
+
+**Scaling validation**: Anamnesis advantage holds at d=256 with 21.8% improvement over Transformer.
+
+**Shakespeare char-level, d=256, 8 layers, 8h+lw+Engram, seed=42, T_max=5000:**
+
+| Step | Anamnesis d=256 | Anamnesis d=128 | Transformer d=256 |
+|------|-----------------|-----------------|-------------------|
+| 500 | 8.79 | 9.56 | 11.86 |
+| 1000 | 5.29 | 6.27 | 7.91 |
+| 2000 | 3.97 | 4.67 | 5.49 |
+| 3000 | 3.64 | 4.29 | 4.70 |
+| **5000** | **3.44** | **4.07** | **4.40** |
+
+**Anamnesis d=256 beats Transformer d=256 by 21.8%** (3.44 vs 4.40).
+
+**Complete scaling table** (all Shakespeare char-level, 5K steps, T_max=5000):
+
+| Model | d | Params | val_ppl | Δ vs Transformer same d |
+|-------|---|--------|---------|------------------------|
+| Transformer | 128 | 1.7M | 5.12 | — |
+| Transformer | 256 | 6.6M | 4.40 | — |
+| Anamnesis d=128 | 128 | 7.9M | **3.93** | **-23.2%** |
+| Anamnesis d=256 | 256 | 19.1M | **3.44** | **-21.8%** |
+
+**Key finding**: The Anamnesis advantage is remarkably consistent at ~22% across both
+model scales. The scaling from d=128→d=256 gives 12.5% improvement for Anamnesis
+(3.93→3.44), similar to Transformer's 14.1% improvement (5.12→4.40).
+
+**Convergence speed**: d=256 converges faster (step 3500) than d=128 (step 4500).
+
 ## Autonomous Research Loop
 
 ### Objective
