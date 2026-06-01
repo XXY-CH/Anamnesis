@@ -1044,6 +1044,38 @@ model scales. The scaling from d=128→d=256 gives 12.5% improvement for Anamnes
 Non-overlapping confidence intervals at both model scales.
 Anamnesis advantage is consistent and statistically significant at ~23-24%.
 
+### Phase 5.19: Bare RetNet d=256 5K-Step Ablation (COMPLETE)
+
+**d=256 decomposition** — layerwise gamma alone already beats Transformer!
+
+**Bare RetNet d=256, 8h+lw, seed=42, T_max=5000:**
+
+| Step | Bare RetNet d=256 | Anamnesis d=256 | Transformer d=256 |
+|------|-------------------|-----------------|-------------------|
+| 500 | 9.01 | 8.79 | 11.86 |
+| 1000 | 7.12 | 5.29 | 7.91 |
+| 2000 | 5.54 | 3.97 | 5.49 |
+| 3000 | 4.71 | 3.64 | 4.70 |
+| **5000** | **4.31** | **3.44** | **4.40** |
+
+**Complete ablation matrix** (all seed=42, 5K steps, T_max=5000):
+
+| Config | d=128 | d=256 | Engram Δ d=128 | Engram Δ d=256 |
+|--------|-------|-------|----------------|----------------|
+| Bare RetNet 8h+lw | 6.28 | 4.31 | — | — |
+| Anamnesis 8h+lw+Eng | 4.07 | 3.44 | -35.2% | -20.2% |
+| Transformer | 5.12 | 4.40 | — | — |
+
+Bare RetNet vs Transformer: **+23% worse** at d=128, **-2% better** at d=256.
+
+**Critical finding**: Layerwise gamma alone makes RetNet competitive at d=128
+(closes gap from 48% to 23%) and **superior** at d=256 (beats by 2%).
+Engram amplifies the advantage at both scales but proportionally less at d=256
+(20% vs 35%) because the base model is stronger.
+
+**Implication**: The layerwise gamma mechanism scales better with model width than
+Engram. For larger models, layerwise gamma alone may suffice.
+
 ## Autonomous Research Loop
 
 ### Objective
