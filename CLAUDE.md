@@ -1076,6 +1076,34 @@ Engram amplifies the advantage at both scales but proportionally less at d=256
 **Implication**: The layerwise gamma mechanism scales better with model width than
 Engram. For larger models, layerwise gamma alone may suffice.
 
+### Phase 5.20: Complete Ablation Matrix at d=128 and d=256 (COMPLETE)
+
+**Bare RetNet d=256 4h (no layerwise), seed=42, T_max=5000: val_ppl=5.57**
+
+**Complete 2x3 ablation matrix** (all seed=42, 5K steps, T_max=5000):
+
+| Config | d=128 | d=256 | d scaling |
+|--------|-------|-------|-----------|
+| Bare RetNet 4h (baseline) | 9.78 | **5.57** | -43.1% |
+| + Layerwise gamma + 8h | 6.28 | 4.31 | -31.4% |
+| + Engram | 4.07 | 3.44 | -15.5% |
+| Transformer | 5.12 | 4.40 | -14.1% |
+
+**Contribution decomposition comparison:**
+
+| Component | d=128 | d=256 |
+|-----------|-------|-------|
+| Layerwise gamma + 8h (absolute) | -3.50 (-35.8%) | -1.26 (-22.6%) |
+| Engram (absolute) | -2.21 (-35.2%) | -0.87 (-20.2%) |
+| **Total** | **-5.71 (-58.4%)** | **-2.13 (-38.2%)** |
+
+Both innovations contribute less at d=256 in both absolute and relative terms,
+but the base model is already much stronger (5.57 vs 9.78 at baseline).
+
+**Critical insight**: Bare RetNet 4h d=256 (5.57) is still worse than Transformer d=128
+(5.12). Layerwise gamma is essential to make RetNet competitive with Transformer.
+At d=256, layerwise gamma alone (4.31) beats Transformer d=256 (4.40) by 2%.
+
 ## Autonomous Research Loop
 
 ### Objective
