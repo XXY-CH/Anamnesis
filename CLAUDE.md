@@ -1151,6 +1151,35 @@ The seed=100 Transformer (3.61) is a strong run — advantage still present but 
 Transformer variance increases with model size (0.16 at d=128, 0.56 at d=256).
 This suggests Anamnesis's architectural inductive bias provides more stable training.
 
+### Phase 5.23: Fair Decomposition with Matched T_max (COMPLETE)
+
+**Bare RetNet d=128 4h @ 5K (T_max=5K): val_ppl=7.99** (was 9.78 with T_max=2K)
+
+The 4h baseline improves 18.3% just from longer training (T_max matching).
+Previous decomposition used unmatched T_max (2K baseline vs 5K results).
+
+**Fair decomposition (all T_max=5000, seed=42):**
+
+d=128:
+| Component | PPL | Absolute | Relative | Share |
+|-----------|-----|----------|----------|-------|
+| Baseline (4h) | 7.99 | — | — | — |
+| + Layerwise gamma + 8h | 6.28 | 1.71 | -21.4% | 43.6% |
+| + Engram | 4.07 | 2.21 | -35.2% | 56.4% |
+| Total | 4.07 | 3.92 | -49.1% | 100% |
+
+d=256:
+| Component | PPL | Absolute | Relative | Share |
+|-----------|-----|----------|----------|-------|
+| Baseline (4h) | 5.57 | — | — | — |
+| + Layerwise gamma + 8h | 4.31 | 1.26 | -22.6% | 59.2% |
+| + Engram | 3.44 | 0.87 | -20.2% | 40.8% |
+| Total | 3.44 | 2.13 | -38.2% | 100% |
+
+**The contribution flips with model size:**
+- d=128: Engram dominant (56%) — hash tables compensate for limited capacity
+- d=256: Layerwise dominant (59%) — architectural regularization benefits at larger width
+
 ## Autonomous Research Loop
 
 ### Objective
