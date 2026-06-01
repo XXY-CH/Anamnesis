@@ -1188,12 +1188,13 @@ d=256:
 
 | Model | d | seed=42 | seed=100 | seed=200 | **Mean ± Std** |
 |-------|---|---------|----------|----------|----------------|
-| Anamnesis | 128 | 4.07 | 3.79 | — | 3.93±0.14 |
+| **Anamnesis** | **128** | **4.07** | **3.79** | **4.36** | **4.07±0.29** |
 | Transformer | 128 | 5.12 | 4.89 | — | 5.01±0.16 |
 | **Anamnesis** | **256** | **3.44** | **3.23** | **3.87** | **3.51±0.27** |
 | Transformer | 256 | 4.40 | 3.61 | 4.24 | **4.08±0.40** |
 
-Anamnesis beats Transformer by **14.0% at d=256** (3.51 vs 4.08) and **21.6% at d=128** (3.93 vs 5.01).
+Anamnesis beats Transformer by **18.8% at d=128** (4.07 vs 5.01, non-overlapping CIs)
+and **14.0% at d=256** (3.51 vs 4.08).
 Anamnesis variance is 1.5x lower at d=256 (0.27 vs 0.40) — more stable training.
 
 **BPE max_ngram=2 — DISCARDED.** Worse than max_ngram=3 (215 vs 184). Fewer tables (8 vs 12)

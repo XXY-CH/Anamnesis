@@ -144,7 +144,7 @@ def fig_ablation_bar():
 def fig_multiseed():
     # Real data from all seeds (T_max=5000)
     models = [
-        ("Anamnesis d=128", [4.07, 3.79], "#2ca02c"),
+        ("Anamnesis d=128", [4.07, 3.79, 4.36], "#2ca02c"),
         ("Transformer d=128", [5.12, 4.89], "#ff7f0e"),
         ("Anamnesis d=256", [3.44, 3.23, 3.87], "#1f77b4"),
         ("Transformer d=256", [4.40, 3.61, 4.24], "#d62728"),
@@ -192,7 +192,7 @@ def fig_scaling():
 
     anamnesis_ppl = {
         64: 8.53,   # Phase 5.2 (no layerwise at d=64, but with Engram)
-        128: 3.93,  # mean of s42=4.07, s100=3.79
+        128: 4.07,  # mean of s42=4.07, s100=3.79, s200=4.36
         256: 3.51,  # mean of s42=3.44, s100=3.23, s200=3.87
     }
     retnet_ppl = {
@@ -202,7 +202,7 @@ def fig_scaling():
     }
     transformer_ppl = {
         64: 12.39,  # Phase 5.2
-        128: 5.01,  # mean of s42=5.12, s100=4.89
+        128: 5.01,  # mean of s42=5.12, s100=4.89 (no s200)
         256: 4.08,  # mean of s42=4.40, s100=3.61, s200=4.24
     }
 
