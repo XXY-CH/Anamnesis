@@ -1180,6 +1180,26 @@ d=256:
 - d=128: Engram dominant (56%) — hash tables compensate for limited capacity
 - d=256: Layerwise dominant (59%) — architectural regularization benefits at larger width
 
+### Phase 5.24: 3-Seed d=256 Validation + BPE ngram=2 (COMPLETE)
+
+**Transformer d=256 seed=200: val_ppl=4.24**. **Anamnesis d=256 seed=200: val_ppl=3.87**.
+
+**Complete 3-seed comparison** (Shakespeare char-level, 5K steps, T_max=5000):
+
+| Model | d | seed=42 | seed=100 | seed=200 | **Mean ± Std** |
+|-------|---|---------|----------|----------|----------------|
+| Anamnesis | 128 | 4.07 | 3.79 | — | 3.93±0.14 |
+| Transformer | 128 | 5.12 | 4.89 | — | 5.01±0.16 |
+| **Anamnesis** | **256** | **3.44** | **3.23** | **3.87** | **3.51±0.27** |
+| Transformer | 256 | 4.40 | 3.61 | 4.24 | **4.08±0.40** |
+
+Anamnesis beats Transformer by **14.0% at d=256** (3.51 vs 4.08) and **21.6% at d=128** (3.93 vs 5.01).
+Anamnesis variance is 1.5x lower at d=256 (0.27 vs 0.40) — more stable training.
+
+**BPE max_ngram=2 — DISCARDED.** Worse than max_ngram=3 (215 vs 184). Fewer tables (8 vs 12)
+with still-extreme collision rate (16.7M/8192 ≈ 2000:1) is a net negative. BPE Engram direction
+confirmed as dead end per Proof 47.
+
 ## Autonomous Research Loop
 
 ### Objective
