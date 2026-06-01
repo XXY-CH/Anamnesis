@@ -100,10 +100,12 @@ class LinearAttentionModel(nn.Module):
             elif isinstance(module, nn.Embedding):
                 torch.nn.init.normal_(module.weight, std=0.02)
 
-    def forward(self, idx: torch.Tensor) -> torch.Tensor:
+    def forward(self, idx: torch.Tensor, return_metrics: bool = False, **kwargs) -> torch.Tensor | tuple:
         B, L = idx.shape
         x = self.embedding(idx)
         for layer in self.layers:
             x = layer(x)
         logits = self.head(x)
+        if return_metrics:
+            return logits, {}
         return logits
