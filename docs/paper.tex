@@ -167,6 +167,27 @@ Transformer (parallel) & 21.9K & 44.1K & 52.8K & 35.0K & 22.5K \\
 Recurrent throughput is \textbf{constant} $\rightarrow$ O(1) per-token inference.
 Transformer has no recurrent mode; forced O($N^2$) parallel.
 
+\subsection{Inference Latency Profiling}
+
+\begin{table}[h]
+\centering
+\caption{Parallel forward latency (ms, batch=1) on MPS. d=128, 8 layers.}
+\begin{tabular}{lcccc}
+\toprule
+Model & 128 & 512 & 1024 & 2048 \\
+\midrule
+Anamnesis & 12.4 & 17.3 & 47.5 & 135.9 \\
+Transformer & 5.0 & 9.5 & 29.5 & 88.2 \\
+Linear Attention & 4.2 & 4.2 & 5.0 & 7.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Anamnesis overhead ratio decreases from 2.5$\times$ (seq=128) to 1.5$\times$ (seq=2048)
+relative to Transformer. At d=256, the ratio is 1.2--1.3$\times$.
+Parameter memory: Anamnesis 56.9\,MB vs Transformer 7.5\,MB (d=128),
+due to 12 Engram hash tables (12 $\times$ 8192 slots $\times$ d\_model).
+
 \subsection{1M Token Retrieval}
 
 Anamnesis + chunk retrieval: \textbf{EM=1.000} at 1M tokens (2048 chunks).
