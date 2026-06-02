@@ -1227,7 +1227,7 @@ Figure: fig10_recurrent_vs_parallel.pdf
 
 | Model | val_ppl | Params | Δ vs Transformer |
 |-------|---------|--------|-----------------|
-| **Anamnesis 8h+lw+Eng** | **3.572** | 7.9M | **-31.5%** |
+| **Anamnesis 8h+lw+Eng** | **3.588 ± 0.081** (3 seeds) | 7.9M | **-31.3%** |
 | Transformer 8h | 5.220 | 1.7M | — |
 | Bare RetNet 8h+lw | 5.240 | 1.6M | +0.4% |
 
