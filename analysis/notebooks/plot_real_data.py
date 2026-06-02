@@ -144,6 +144,7 @@ def fig_ablation_bar():
 def fig_multiseed():
     # Real data from all seeds (T_max=5000)
     models = [
+        ("Linear Attn d=128", [10.39], "#7f7f7b"),
         ("Anamnesis d=128", [4.07, 3.79, 4.36], "#2ca02c"),
         ("Transformer d=128", [5.12, 4.89], "#ff7f0e"),
         ("Anamnesis d=256", [3.44, 3.23, 3.87], "#1f77b4"),
@@ -200,6 +201,9 @@ def fig_scaling():
         128: 6.28,  # 8h+lw seed=42
         256: 4.31,  # 8h+lw seed=42
     }
+    linear_attn_ppl = {
+        128: 10.39,
+    }
     transformer_ppl = {
         64: 12.39,  # Phase 5.2
         128: 5.01,  # mean of s42=5.12, s100=4.89 (no s200)
@@ -211,6 +215,7 @@ def fig_scaling():
             linewidth=2, markersize=8, label="Anamnesis (8h+lw+Engram)")
     ax.plot(d_models, [retnet_ppl[d] for d in d_models], "s--", color="#9467bd",
             linewidth=1.5, markersize=7, label="Bare RetNet (8h+lw)")
+    ax.plot([128], [linear_attn_ppl[128]], "D", color="#7f7f7b", markersize=8, label="Linear Attention")
     ax.plot(d_models, [transformer_ppl[d] for d in d_models], "^--", color="#d62728",
             linewidth=1.5, markersize=7, label="Transformer")
 
