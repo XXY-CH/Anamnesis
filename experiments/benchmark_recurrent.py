@@ -38,21 +38,23 @@ def benchmark_parallel(model, seq_len, vocab_size, device, n_warmup=2, n_measure
 def benchmark_recurrent(model, seq_len, vocab_size, device, n_warmup=1, n_measured=3):
     """Benchmark recurrent (one-token-at-a-time) inference."""
     model.eval()
-    bos = torch.randint(0, vocab_size, (1, 1), device=device)
+    bos = torch.randint(0, vocab_size, (1,), device=device)
 
     with torch.no_grad():
         for _ in range(n_warmup):
-            state = model.init_recurrent_state(device)
-            for t in range(min(seq_len, 64)):
-                _, state = model.forward_recurrent_step(bos, state)
+            state = model.init_recurrent_state(1, torch.device(device))
+            x_warm = torch.randint(0, vocab_size, (64,), device=device)
+            for t in range(64):
+                _, state = model.forward_recurrent_step(x_warm[t:t+1], state)
         if hasattr(torch, "mps") and device == "mps":
             torch.mps.synchronize()
 
         t0 = time.perf_counter()
         for _ in range(n_measured):
-            state = model.init_recurrent_state(device)
+            state = model.init_recurrent_state(1, torch.device(device))
+            x = torch.randint(0, vocab_size, (seq_len,), device=device)
             for t in range(seq_len):
-                _, state = model.forward_recurrent_step(bos, state)
+                _, state = model.forward_recurrent_step(x[t:t+1], state)
         if hasattr(torch, "mps") and device == "mps":
             torch.mps.synchronize()
         elapsed = time.perf_counter() - t0
