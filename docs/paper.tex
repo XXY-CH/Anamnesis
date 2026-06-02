@@ -107,6 +107,27 @@ Bare RetNet 8h+lw & 256 & 6.4M & 4.31 & — & +5.6\% \\
 \end{tabular}
 \end{table}
 
+\subsection{Cross-Dataset Validation}
+
+\begin{table}[h]
+\centering
+\caption{TinyStories char-level PPL at 5K steps (vocab=94, 10M train chars). Single seed.}
+\begin{tabular}{lcccc}
+\toprule
+Model & d & Params & PPL & $\Delta$ vs TF \\
+\midrule
+\textbf{Anamnesis} & \textbf{128} & 7.9M & \textbf{3.57} & \textbf{-31.5\%} \\
+Transformer & 128 & 1.7M & 5.22 & — \\
+Bare RetNet 8h+lw & 128 & 1.6M & 5.24 & +0.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The advantage nearly doubles on TinyStories (31.5\%) vs Shakespeare (18.8\%).
+TinyStories' repetitive children's-story patterns maximize Engram's N-gram lookup value.
+Notably, bare RetNet 8h+lw matches Transformer (5.24 vs 5.22), confirming all improvement
+comes from Engram on this dataset — contrasting with Shakespeare's 44/56 layerwise/Engram split.
+
 \subsection{Fair Ablation}
 
 \begin{table}[h]
@@ -171,7 +192,7 @@ Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47), where $K$=slots, $S$=occurrences, 
 \begin{itemize}
 \item Engram ineffective for BPE/subword tokenization.
 \item Recurrent mode slower than parallel (40--140 tok/s vs 10--50K tok/s).
-\item Evaluated primarily on Shakespeare (small dataset).
+\item Evaluated on Shakespeare (small dataset) and TinyStories (children's stories).
 \end{itemize}
 
 \section{Conclusion}
