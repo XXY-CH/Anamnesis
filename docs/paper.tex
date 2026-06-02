@@ -29,7 +29,12 @@ We present Anamnesis, a RetNet-based architecture achieving state-of-the-art per
 Small dense language models face a tension: attention scales quadratically, while linear alternatives sacrifice quality. We present \textbf{Anamnesis} (RetNet + two innovations): (1) \textbf{Layerwise gamma}---decay varies by depth, zero params, 15\% PPL gain. (2) \textbf{Scalar-gated Engram}---O(1) hashed N-gram lookup, 20--35\% gain. Anamnesis d=128: \textbf{4.07 PPL}, 18.8\% better than Transformer (5.01), non-overlapping CIs. d=256: 3.51 vs 4.08 (14.0\%). O(1) recurrent inference at $\sim$140 tok/s constant. Linear Attention: 10.39 PPL---proving not all O(N) models are equal.
 
 \section{Related Work}
-% TODO: Expand
+
+\textbf{Efficient sequence models.} Transformer~\cite{vaswani2017attention} achieves strong quality but $O(N^2)$ attention. Linear Attention~\cite{katharopoulos2020linear} reduces to $O(N)$ via kernelized feature maps but sacrifices expressivity (10.39 vs 5.12 PPL in our controlled comparison). RetNet~\cite{sun2023retnet} achieves both parallel training and $O(1)$ recurrent inference via retention, forming our backbone. Mamba~\cite{gu2023mamba} uses selective state-space models with input-dependent parameters; our layerwise gamma provides a simpler, parameter-free form of temporal specialization. Gated DeltaNet~\cite{deltanet2025} proposes a delta update rule for key-value stores; we show this is redundant when TokenCopyBuffer already solves exact recall (Proof~35).
+
+\textbf{Memory-augmented networks.} External memory tables have a long history in neural networks. Our Engram hash tables differ in using scalar gating (Proof~40) and N-gram hashing for O(1) lookup. Unlike attention-based memory, Engram requires no softmax or normalization---the gate directly controls injection strength.
+
+\textbf{Long-context retrieval.} RAG and chunk retrieval methods process long documents by selecting relevant passages. Our Context Compiler extends this with contrastive chunk selection trained on just 16 chunks, generalizing 256$\times$ to 2048 chunks (1M tokens). The key insight is that frozen RetNet hidden states produce discriminative chunk embeddings, while Transformer hidden states do not.
 
 \section{Method}
 
