@@ -176,7 +176,11 @@ Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47), where $K$=slots, $S$=occurrences, 
 
 \section{Conclusion}
 
-Anamnesis demonstrates that two simple, complementary innovations — layerwise gamma scheduling and scalar-gated Engram hash tables — can substantially improve small model language modeling quality while maintaining O(1) inference. The architecture is Pareto-optimal: better PPL than Transformer at matched width, with constant-time decoding. The Context Compiler pipeline extends this to million-token contexts.
+Anamnesis demonstrates that two simple innovations---layerwise gamma scheduling and scalar-gated Engram hash tables---substantially improve small model LM quality while maintaining O(1) inference. Key results: (1) 18.8\% PPL improvement over Transformer at d=128, 14.0\% at d=256, both statistically significant. (2) O(1) recurrent inference empirically proven: constant $\sim$140 tok/s across all sequence lengths. (3) 1M token retrieval with EM=1.000. (4) Linear Attention is 155\% worse, proving RetNet's retention is qualitatively superior.
+
+\textbf{Limitations.} Engram is ineffective for BPE/subword tokenization (Proof~47). Evaluated primarily on Shakespeare (small dataset, high seed variance). Multi-hop reasoning evaluation remains future work.
+
+\textbf{Future work.} (1) Scale to larger datasets (WikiText-103, OpenWebText). (2) Multi-hop retrieval requiring reasoning beyond exact recall. (3) Adapt Engram for subword tokenization via adaptive slot sizing. (4) Pre-training on diverse domains to validate generalization.
 
 \appendix
 \section{Proofs}
