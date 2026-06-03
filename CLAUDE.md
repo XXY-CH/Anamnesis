@@ -1274,6 +1274,9 @@ Both hyperparameters show clear U-shaped optima. Defaults (spread=1.0, slots=409
 
 lr=1e-3 at 2K steps matches lr=3e-4 at 5K steps (4.04 vs 4.07). Anamnesis converges 2.5x faster with higher LR.
 
+**lr=1e-3 at 5K steps: val_ppl=3.020 — NEW SOTA** (-26% vs lr=3e-4 at 5K). Higher LR is uniformly better
+for this architecture. 3-seed validation: 3.128±0.125, **-37.5% vs Transformer d=128 (5.01±0.16)**.
+
 ## Autonomous Research Loop
 
 ### Objective
