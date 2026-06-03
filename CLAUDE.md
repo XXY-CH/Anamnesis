@@ -1288,7 +1288,7 @@ for this architecture. 3-seed validation: 3.128±0.125, **-37.5% vs Transformer 
 | Transformer | 128 | 3.94±0.07 (3) | — |
 | Bare RetNet 8h+lw | 128 | 4.11 (1) | +4% |
 | Linear Attention | 128 | 4.47 (1) | +14% |
-| **Anamnesis** | **256** | **2.43±0.04** (2) | **-28.2%** |
+| **Anamnesis** | **256** | **2.42±0.02** (3) | **-28.4%** |
 | Transformer | 256 | 3.38±0.07 (2) | — |
 
 **Fair ablation (d=128, lr=1e-3, seed=42):**
