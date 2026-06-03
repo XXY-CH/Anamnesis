@@ -58,17 +58,17 @@ def load_training_curve(name: str) -> tuple[list[float], list[float], list[float
 # ═══════════════════════════════════════════════════════════════
 def fig_training_dynamics():
     configs = [
-        # (display_name, result_dir, color, linestyle, marker)
-        ("Anamnesis d=256 (s42)", "round28_anamnesis_d256_5k", "#1f77b4", "-", "o"),
-        ("Anamnesis d=256 (s100)", "round29_anamnesis_d256_5k_s100", "#1f77b4", "--", "s"),
-        ("Anamnesis d=128 (s42)", "round23_anamnesis_5k", "#2ca02c", "-", "o"),
-        ("Anamnesis d=128 (s100)", "round24_anamnesis_5k_s100", "#2ca02c", "--", "s"),
-        ("Transformer d=256 (s42)", "round23_transformer_5k", "#d62728", "-", "o"),
-        ("Transformer d=256 (s100)", "round32_transformer_d256_5k_s100", "#d62728", "--", "s"),
-        ("Transformer d=128 (s42)", "round25_transformer_d128_5k", "#ff7f0e", "-", "o"),
-        ("Transformer d=128 (s100)", "round33_transformer_d128_5k_s100", "#ff7f0e", "--", "s"),
-        ("Bare RetNet d=256 8h+lw", "round30_bare_retnet_d256_5k", "#9467bd", "-", "^"),
-        ("Bare RetNet d=128 4h", "round34_bare_retnet_d128_4h_5k", "#8c564b", "-", "v"),
+        # (display_name, result_dir, color, linestyle, marker) — all lr=1e-3
+        ("Anamnesis d=256 (s42)", "anamnesis_d256_lr1e3_s42", "#1f77b4", "-", "o"),
+        ("Anamnesis d=256 (s100)", "anamnesis_d256_lr1e3_s100", "#1f77b4", "--", "s"),
+        ("Anamnesis d=128 (s42)", "hparam_lr1e3_5k", "#2ca02c", "-", "o"),
+        ("Anamnesis d=128 (s100)", "hparam_lr1e3_5k_s100", "#2ca02c", "--", "s"),
+        ("Transformer d=256 (s42)", "transformer_d256_lr1e3_s42", "#d62728", "-", "o"),
+        ("Transformer d=256 (s100)", "transformer_d256_lr1e3_s100", "#d62728", "--", "s"),
+        ("Transformer d=128 (s42)", "transformer_d128_lr1e3_s42", "#ff7f0e", "-", "o"),
+        ("Transformer d=128 (s100)", "transformer_d128_lr1e3_s100", "#ff7f0e", "--", "s"),
+        ("Bare RetNet d=128 8h+lw", "retnet_8hlw_lr1e3_s42", "#9467bd", "-", "^"),
+        ("Linear Attention d=128", "linear_attn_d128_lr1e3_s42", "#7f7f7b", "-", "v"),
     ]
 
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -97,11 +97,11 @@ def fig_training_dynamics():
 # Figure 2: Ablation Bar Chart — d=128
 # ═══════════════════════════════════════════════════════════════
 def fig_ablation_bar():
-    # Real data from Phase 5.11/5.17/5.23 (seed=42, T_max=5K)
+    # Real data (seed=42, lr=1e-3, T_max=5K)
     configs_128 = [
-        ("Bare RetNet\n4h (baseline)", 7.99, "#8c564b"),
-        ("+ Layerwise γ\n+ 8h", 6.28, "#9467bd"),
-        ("+ Engram\n(Anamnesis)", 4.07, "#1f77b4"),
+        ("Bare RetNet\n4h (lr=3e-4)", 7.99, "#8c564b"),
+        ("+ Layerwise γ\n+ 8h + lr=1e-3", 4.11, "#9467bd"),
+        ("+ Engram\n(Anamnesis)", 3.02, "#1f77b4"),
     ]
     configs_256 = [
         ("Bare RetNet\n4h (baseline)", 5.57, "#8c564b"),
