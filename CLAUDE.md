@@ -1225,11 +1225,14 @@ Figure: fig10_recurrent_vs_parallel.pdf
 
 **TinyStories char-level LM** (10M train chars, 500K valid, vocab=94, seq_len=512, 5K steps, T_max=5000):
 
-| Model | val_ppl | Params | Δ vs Transformer |
-|-------|---------|--------|-----------------|
-| **Anamnesis 8h+lw+Eng** | **3.588 ± 0.081** (3 seeds) | 7.9M | **-31.3%** |
-| Transformer 8h | 5.220 | 1.7M | — |
-| Bare RetNet 8h+lw | 5.240 | 1.6M | +0.4% |
+| Model | lr=3e-4 | lr=1e-3 | LR改进 |
+|-------|---------|---------|--------|
+| **Anamnesis 8h+lw+Eng** | **3.588 ± 0.081** (3 seeds) | **2.861** (s42) | -20.3% |
+| Transformer 8h | 5.220 | 3.139 (s42) | -39.9% |
+| Bare RetNet 8h+lw | 5.240 | — | — |
+
+**Fair LR comparison (both lr=1e-3)**: Anamnesis 2.861 vs Transformer 3.139 → **-8.8%**.
+Shakespeare fair gap: -21.9%. TinyStories fair gap: -8.8%. Transformer benefits more from lr=1e-3 on TinyStories.
 
 **Critical finding**: Anamnesis advantage nearly doubles on larger data (31.5% vs 18.8% on Shakespeare).
 TinyStories is a children's story dataset with highly repetitive N-gram patterns — exactly where
