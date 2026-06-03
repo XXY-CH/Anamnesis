@@ -213,9 +213,10 @@ Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47), where $K$=slots, $S$=occurrences, 
 \section{Limitations}
 
 \begin{itemize}
-\item Engram ineffective for BPE/subword tokenization.
+\item Engram ineffective for BPE/subword tokenization (Proof~47).
 \item Recurrent mode slower than parallel (40--140 tok/s vs 10--50K tok/s).
 \item Evaluated on Shakespeare (small dataset) and TinyStories (children's stories).
+\item Multi-needle retrieval: top-2 recall is only 20\% (near random baseline of 16.7\%) when placing 2 needles in 4 chunks. The contrastive retriever fails to identify multiple relevant chunks simultaneously because the query hidden state is computed from local context only and carries no signal about needle positions in other chunks.
 \end{itemize}
 
 \section{Conclusion}
@@ -224,7 +225,7 @@ Anamnesis demonstrates that two simple innovations---layerwise gamma scheduling 
 
 \textbf{Limitations.} Engram is ineffective for BPE/subword tokenization (Proof~47). Evaluated primarily on Shakespeare (small dataset, high seed variance). Multi-hop reasoning evaluation remains future work.
 
-\textbf{Future work.} (1) Scale to larger datasets (WikiText-103, OpenWebText). (2) Multi-hop retrieval requiring reasoning beyond exact recall. (3) Adapt Engram for subword tokenization via adaptive slot sizing. (4) Pre-training on diverse domains to validate generalization.
+\textbf{Future work.} (1) Scale to larger datasets (WikiText-103, OpenWebText). (2) Iterative retrieval for multi-hop reasoning---find first needle, condition query, search again. (3) Adapt Engram for subword tokenization via adaptive slot sizing. (4) Pre-training on diverse domains to validate generalization.
 
 \appendix
 \section{Proofs}
