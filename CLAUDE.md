@@ -1280,10 +1280,21 @@ lr=1e-3 at 2K steps matches lr=3e-4 at 5K steps (4.04 vs 4.07). Anamnesis conver
 **lr=1e-3 at 5K steps: val_ppl=3.020 — NEW SOTA** (-26% vs lr=3e-4 at 5K). Higher LR is uniformly better
 for this architecture. 3-seed validation: 3.128±0.125, **-37.5% vs Transformer d=128 (5.01±0.16)**.
 
-**Fair LR comparison** (both lr=1e-3, seed=42, 5K steps):
-- Anamnesis d=128: 3.020, Transformer d=128: 3.984 → **-24.1% gap (fair)**
-- Transformer also benefits from lr=1e-3 (-22.2%), but Anamnesis benefits more (-25.8%)
-- d=256 lr=1e-3: Anamnesis 2.398 vs Transformer 4.08 → **-41.2%**
+**Fair LR comparison (all lr=1e-3, Shakespeare, 5K steps):**
+
+| Model | d | Mean±Std (seeds) | Δ vs TF |
+|-------|---|------------------|---------|
+| **Anamnesis** | **128** | **3.12±0.11** (3) | **-20.8%** |
+| Transformer | 128 | 3.94±0.07 (3) | — |
+| Bare RetNet 8h+lw | 128 | 4.11 (1) | +4% |
+| Linear Attention | 128 | 4.47 (1) | +14% |
+| **Anamnesis** | **256** | **2.43±0.04** (2) | **-28.2%** |
+| Transformer | 256 | 3.38±0.07 (2) | — |
+
+**Fair ablation (d=128, lr=1e-3, seed=42):**
+- Bare RetNet 8h+lw: 4.106 (60% share)
+- + Engram → 3.020 (40% share)
+- Total: -62.2% from lr=3e-4 4h baseline (7.99)
 
 ## Autonomous Research Loop
 
