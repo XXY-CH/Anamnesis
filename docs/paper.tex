@@ -90,19 +90,19 @@ All models: 8 layers, CosineAnnealingLR with T\_max=steps.
 
 \begin{table}[h]
 \centering
-\caption{Shakespeare char-level PPL at 5K steps (T\_max=5000, lr$=10^{-3}$). Matched hyperparameters. 2--3 seeds.}
+\caption{Shakespeare char-level PPL at 5K steps (T\_max=5000, lr$=10^{-3}$). Matched hyperparameters.}
 \begin{tabular}{lccccc}
 \toprule
-Model & d & Params & Mean PPL & Std & $\Delta$ vs TF \\
+Model & d & Params & PPL & Seeds & $\Delta$ vs TF \\
 \midrule
-\textbf{Anamnesis} & \textbf{128} & 7.9M & \textbf{3.06} & 0.05 & \textbf{-21.9\%} \\
-Transformer & 128 & 1.7M & 3.92 & 0.10 & — \\
-Bare RetNet 8h+lw & 128 & 1.6M & 6.28 & — & +60\% \\
-Linear Attention & 128 & 1.6M & 10.39 & — & +165\% \\
+\textbf{Anamnesis} & \textbf{128} & 7.9M & \textbf{3.06} & 2 & \textbf{-24.2\%} \\
+Transformer & 128 & 1.7M & 3.98 & 1 & — \\
+Bare RetNet 8h+lw & 128 & 1.6M & 6.28 & 1 & +58\% \\
+Linear Attention & 128 & 1.6M & 10.39 & 1 & +161\% \\
 \midrule
-\textbf{Anamnesis} & \textbf{256} & 19.1M & \textbf{2.40} & — & \textbf{-41.2\%} \\
-Transformer & 256 & 6.6M & 4.08 & 0.40 & — \\
-Bare RetNet 8h+lw & 256 & 6.4M & 4.31 & — & +5.6\% \\
+\textbf{Anamnesis} & \textbf{256} & 19.1M & \textbf{2.40} & 1 & \textbf{-28.1\%} \\
+Transformer & 256 & 6.6M & 3.34 & 1 & — \\
+Bare RetNet 8h+lw & 256 & 6.4M & 4.31 & 1 & +29\% \\
 \bottomrule
 \end{tabular}
 \end{table}
