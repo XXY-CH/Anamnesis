@@ -1243,6 +1243,27 @@ but +Engram drops to 3.572 (-31.8%). The contribution decomposition:
 This contrasts with Shakespeare where contributions were split 44/56 (layerwise/Engram).
 TinyStories' repetitive structure means N-gram lookup is extremely effective.
 
+### Phase 5.27: Hyperparameter Sensitivity Sweep (COMPLETE)
+
+**Gamma spread sweep** (Shakespeare d=128, 8h+lw+Eng, 2K steps, seed=42):
+
+| spread | val_ppl | Δ vs baseline |
+|--------|---------|--------------|
+| 0.5 | 7.60 | +32% |
+| **1.0** | **5.77** | **baseline ✓** |
+| 1.5 | 6.13 | +6% |
+| 2.0 | 6.22 | +8% |
+
+**Engram slots sweep** (same setup):
+
+| slots | val_ppl | Δ vs baseline |
+|-------|---------|--------------|
+| 2048 | 6.96 | +21% |
+| **4096** | **5.77** | **baseline ✓** |
+| 8192 | 6.09 | +5.6% |
+
+Both hyperparameters show clear U-shaped optima. Defaults (spread=1.0, slots=4096) are robust.
+
 ## Autonomous Research Loop
 
 ### Objective
