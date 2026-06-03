@@ -21,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{31.3\%} (3.59$\pm$0.08 vs 5.22). Anamnesis d=256 achieves \textbf{2.40 PPL}, 41.2\% better than Transformer d=256 (4.08$\pm$0.40). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
+We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{31.3\%} (3.59$\pm$0.08 vs 5.22). Anamnesis d=256 achieves \textbf{2.42 PPL} (3 seeds, $\pm$0.02), 28.4\% better than Transformer d=256 (3.38$\pm$0.07). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
 \end{abstract}
 
 \section{Introduction}
@@ -100,7 +100,7 @@ Transformer & 128 & 1.7M & 3.94 & 0.07 & — \\
 Bare RetNet 8h+lw & 128 & 1.6M & 4.11 & — & +36\% \\
 Linear Attention & 128 & 1.6M & 4.47 & — & +48\% \\
 \midrule
-\textbf{Anamnesis} & \textbf{256} & 19.1M & \textbf{2.43} & 0.04 & \textbf{-27.2\%} \\
+\textbf{Anamnesis} & \textbf{256} & 19.1M & \textbf{2.42} & 0.02 & \textbf{-28.4\%} \\
 Transformer & 256 & 6.6M & 3.38 & 0.07 & — \\
 Bare RetNet 8h+lw & 256 & 6.4M & 4.31 & — & +29\% \\
 \bottomrule
@@ -220,7 +220,7 @@ Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47), where $K$=slots, $S$=occurrences, 
 
 \section{Conclusion}
 
-Anamnesis demonstrates that two simple innovations---layerwise gamma scheduling and scalar-gated Engram hash tables---substantially improve small model LM quality while maintaining O(1) inference. Key results: (1) 21.9\% PPL improvement over Transformer at d=128 on Shakespeare with matched lr, 31.3\% on TinyStories, both with non-overlapping confidence intervals. (2) O(1) recurrent inference empirically proven: constant $\sim$140 tok/s across all sequence lengths. (3) 1M token retrieval with EM=1.000. (4) The optimal learning rate ($10^{-3}$) enables Anamnesis d=256 to achieve 2.40 PPL, 41.2\% better than Transformer.
+Anamnesis demonstrates that two simple innovations---layerwise gamma scheduling and scalar-gated Engram hash tables---substantially improve small model LM quality while maintaining O(1) inference. Key results: (1) 21.9\% PPL improvement over Transformer at d=128 on Shakespeare with matched lr, 31.3\% on TinyStories, both with non-overlapping confidence intervals. (2) O(1) recurrent inference empirically proven: constant $\sim$140 tok/s across all sequence lengths. (3) 1M token retrieval with EM=1.000. (4) The optimal learning rate ($10^{-3}$) enables Anamnesis d=256 to achieve 2.42 PPL, 28.4\% better than Transformer.
 
 \textbf{Limitations.} Engram is ineffective for BPE/subword tokenization (Proof~47). Evaluated primarily on Shakespeare (small dataset, high seed variance). Multi-hop reasoning evaluation remains future work.
 
