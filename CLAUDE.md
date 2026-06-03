@@ -1264,6 +1264,16 @@ TinyStories' repetitive structure means N-gram lookup is extremely effective.
 
 Both hyperparameters show clear U-shaped optima. Defaults (spread=1.0, slots=4096) are robust.
 
+**Learning rate sweep** (same setup):
+
+| lr | val_ppl@2K | Δ |
+|----|-----------|---|
+| 1e-4 | 10.86 | +88% |
+| 3e-4 | 5.77 | baseline |
+| **1e-3** | **4.04** | **-30%** |
+
+lr=1e-3 at 2K steps matches lr=3e-4 at 5K steps (4.04 vs 4.07). Anamnesis converges 2.5x faster with higher LR.
+
 ## Autonomous Research Loop
 
 ### Objective
