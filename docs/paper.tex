@@ -132,18 +132,18 @@ comes from Engram on this dataset — contrasting with Shakespeare's 44/56 layer
 
 \begin{table}[h]
 \centering
-\caption{Ablation with matched T\_max=5000 (seed=42).}
+\caption{Ablation with matched lr$=10^{-3}$, T\_max=5000 (seed=42).}
 \begin{tabular}{lcccc}
 \toprule
 & \multicolumn{2}{c}{d=128} & \multicolumn{2}{c}{d=256} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 Config & PPL & Share & PPL & Share \\
 \midrule
-Baseline (4h) & 7.99 & — & 5.57 & — \\
-+ Layerwise $\gamma$ + 8h & 6.28 & 43.6\% & 4.31 & 59.2\% \\
-+ Engram (Anamnesis) & 4.07 & 56.4\% & 3.44 & 40.8\% \\
+Baseline (4h, lr=3e-4) & 7.99 & — & 5.57 & — \\
++ Layerwise $\gamma$ + 8h + lr=1e-3 & 4.11 & 60\% & 4.31 & 52\% \\
++ Engram (Anamnesis) & 3.02 & 40\% & 2.40 & 48\% \\
 \midrule
-Total improvement & -49.1\% & & -38.2\% & \\
+Total improvement & -62.2\% & & -56.9\% & \\
 \bottomrule
 \end{tabular}
 \end{table}
