@@ -30,7 +30,7 @@ Small dense language models face a tension: attention scales quadratically, whil
 
 \section{Related Work}
 
-\textbf{Efficient sequence models.} Transformer~\cite{vaswani2017attention} achieves strong quality but $O(N^2)$ attention. Linear Attention~\cite{katharopoulos2020linear} reduces to $O(N)$ via kernelized feature maps but sacrifices expressivity (10.39 vs 5.12 PPL in our controlled comparison). RetNet~\cite{sun2023retnet} achieves both parallel training and $O(1)$ recurrent inference via retention, forming our backbone. Mamba~\cite{gu2023mamba} uses selective state-space models with input-dependent parameters; our layerwise gamma provides a simpler, parameter-free form of temporal specialization. Gated DeltaNet~\cite{deltanet2025} proposes a delta update rule for key-value stores; we show this is redundant when TokenCopyBuffer already solves exact recall (Proof~35).
+\textbf{Efficient sequence models.} Transformer~\cite{vaswani2017attention} achieves strong quality but $O(N^2)$ attention. Linear Attention~\cite{katharopoulos2020linear} reduces to $O(N)$ via kernelized feature maps but sacrifices expressivity (10.39 vs 5.12 PPL in our controlled comparison). RetNet~\cite{sun2023retnet} achieves both parallel training and $O(1)$ recurrent inference via retention, forming our backbone. Mamba~\cite{gu2023mamba} uses selective state-space models with input-dependent parameters; our layerwise gamma provides a simpler, parameter-free form of temporal specialization. In our controlled comparison, a minimal Mamba implementation achieves PPL=3.77 (seq\_len=128) vs Anamnesis 3.12 (seq\_len=512), though the comparison is confounded by sequence length. Gated DeltaNet~\cite{deltanet2025} proposes a delta update rule for key-value stores; we show this is redundant when TokenCopyBuffer already solves exact recall (Proof~35).
 
 \textbf{Memory-augmented networks.} External memory tables have a long history in neural networks. Our Engram hash tables differ in using scalar gating (Proof~40) and N-gram hashing for O(1) lookup. Unlike attention-based memory, Engram requires no softmax or normalization---the gate directly controls injection strength.
 
@@ -90,7 +90,7 @@ All models: 8 layers, CosineAnnealingLR with T\_max=steps.
 
 \begin{table}[h]
 \centering
-\caption{Shakespeare char-level PPL at 5K steps (T\_max=5000, lr$=10^{-3}$). Matched hyperparameters. 2--3 seeds.}
+\caption{Shakespeare char-level PPL at 5K steps (T\_max=5000, lr$=10^{-3}$). Matched hyperparameters. 2--3 seeds. $^\dagger$Mamba trained at seq\_len=128 (1000 steps) due to sequential scan overhead without CUDA kernel.}
 \begin{tabular}{lccccc}
 \toprule
 Model & d & Params & Mean PPL & Std & $\Delta$ vs TF \\
@@ -98,6 +98,7 @@ Model & d & Params & Mean PPL & Std & $\Delta$ vs TF \\
 \textbf{Anamnesis} & \textbf{128} & 7.9M & \textbf{3.12} & 0.11 & \textbf{-20.8\%} \\
 Transformer & 128 & 1.7M & 3.94 & 0.07 & — \\
 Bare RetNet 8h+lw & 128 & 1.6M & 4.11 & — & +36\% \\
+Minimal Mamba (SSM) & 128 & 915K & 3.77$^\dagger$ & — & -4\% \\
 Linear Attention & 128 & 1.6M & 4.47 & — & +48\% \\
 \midrule
 \textbf{Anamnesis} & \textbf{256} & 19.1M & \textbf{2.42} & 0.02 & \textbf{-28.4\%} \\
