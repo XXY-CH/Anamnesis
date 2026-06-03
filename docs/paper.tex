@@ -21,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.06 PPL} (2 seeds, $\pm$0.05) — 21.9\% better than Transformer d=128 (3.92$\pm$0.10) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{31.3\%} (3.59$\pm$0.08 vs 5.22). Anamnesis d=256 achieves \textbf{2.40 PPL}, 41.2\% better than Transformer d=256 (4.08$\pm$0.40). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
+We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{31.3\%} (3.59$\pm$0.08 vs 5.22). Anamnesis d=256 achieves \textbf{2.40 PPL}, 41.2\% better than Transformer d=256 (4.08$\pm$0.40). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
 \end{abstract}
 
 \section{Introduction}
@@ -95,7 +95,7 @@ All models: 8 layers, CosineAnnealingLR with T\_max=steps.
 \toprule
 Model & d & Params & Mean PPL & Std & $\Delta$ vs TF \\
 \midrule
-\textbf{Anamnesis} & \textbf{128} & 7.9M & \textbf{3.06} & 0.06 & \textbf{-22.3\%} \\
+\textbf{Anamnesis} & \textbf{128} & 7.9M & \textbf{3.12} & 0.11 & \textbf{-20.8\%} \\
 Transformer & 128 & 1.7M & 3.94 & 0.07 & — \\
 Bare RetNet 8h+lw & 128 & 1.6M & 4.11 & — & +36\% \\
 Linear Attention & 128 & 1.6M & 4.47 & — & +48\% \\
