@@ -60,8 +60,9 @@ Transformer pipeline fails beyond 8K (hidden states non-discriminative).
 | Bare RetNet 8h+lw | 171.23 | 89.32 | — | — |
 
 **BPE is seed-dependent**: Anamnesis wins at s42 (67.49 vs 72.37) but loses at s100 (83.63 vs 67.67).
-Engram introduces high variance on BPE (std=11.4). Transformer more stable (std=3.3).
-Anamnesis reliably wins on char-level (5/6 comparisons). BPE result is inconclusive.
+Engram introduces high variance on BPE (std=11.4). Bare RetNet (std=2.7) and Transformer (std=3.3) are stable.
+**Variance source: Engram gate initialization** — low BPE SNR makes gate learning seed-dependent (Proof 48).
+Anamnesis reliably wins on char-level (5/6 comparisons). BPE: disable Engram for stable results.
 
 ### Context-Length Crossover
 
