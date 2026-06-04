@@ -112,14 +112,16 @@ Bare RetNet 8h+lw & 256 & 6.4M & 4.31 & — & +29\% \\
 
 \begin{table}[h]
 \centering
-\caption{Cross-dataset char-level PPL at 5K steps (lr$=10^{-3}$, d=128, 8 layers).}
-\begin{tabular}{lccc}
+\caption{Cross-dataset char-level PPL at 5K steps (lr$=10^{-3}$, 8 layers).}
+\begin{tabular}{lcccc}
 \toprule
-Dataset & Anamnesis & Transformer & $\Delta$ \\
+Dataset & d & Anamnesis & Transformer & $\Delta$ \\
 \midrule
-Shakespeare (3 seeds) & 3.12$\pm$0.11 & 3.94$\pm$0.07 & \textbf{-20.8\%} \\
-TinyStories (3 seeds) & 2.82$\pm$0.03 & 5.22 & \textbf{-46.0\%} \\
-WikiText-2 (2 seeds) & 4.95$\pm$0.18 & 5.88$\pm$0.00 & \textbf{-15.8\%} \\
+Shakespeare (3 seeds) & 128 & 3.12$\pm$0.11 & 3.94$\pm$0.07 & \textbf{-20.8\%} \\
+Shakespeare (3 seeds) & 256 & 2.42$\pm$0.02 & 3.38$\pm$0.07 & \textbf{-28.4\%} \\
+TinyStories (3 seeds) & 128 & 2.82$\pm$0.03 & 5.22 & \textbf{-46.0\%} \\
+WikiText-2 (2 seeds) & 128 & 4.95$\pm$0.18 & 5.88$\pm$0.00 & \textbf{-15.8\%} \\
+WikiText-2 & 256 & 4.48 & 4.75 & \textbf{-5.7\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
