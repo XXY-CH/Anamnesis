@@ -131,8 +131,10 @@ Anamnesis outperforms Transformer in 5 of 6 dataset$\times$scale comparisons.
 The advantage is largest on TinyStories d=128 (46.0\%) whose repetitive children's-story patterns
 maximize Engram's N-gram lookup value, and smallest on WikiText-2 d=256 (5.7\%) which has
 diverse vocabulary at larger model width. Shakespeare falls in between (20.8\%).
-The single loss at TinyStories d=256 (+8\%) reflects Transformer's full attention
-benefiting more from parameter scaling on highly repetitive data.
+The single loss at TinyStories d=256 (+8\%) is caused by Engram: bare RetNet 8h+layerwise
+achieves PPL=2.20 on this task, \emph{beating} Transformer (2.25). At d=256 on highly repetitive data,
+the base model has sufficient capacity to learn N-gram patterns directly, making the hash table
+lookup redundant and slightly harmful. This confirms Engram should be conditionally enabled.
 See Figure~\ref{fig:cross_dataset}.
 
 \begin{figure}[h]
