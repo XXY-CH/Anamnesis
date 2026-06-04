@@ -21,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{46.0\%} (2.82$\pm$0.03 vs 5.22). On WikiText-2, \textbf{18.1\%} (4.82 vs 5.88). Consistent advantage across three datasets. Anamnesis d=256 achieves \textbf{2.42 PPL} (3 seeds, $\pm$0.02), 28.4\% better than Transformer d=256 (3.38$\pm$0.07). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
+We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{46.0\%} (2.82$\pm$0.03 vs 5.22). On WikiText-2, \textbf{15.8\%} (4.95$\pm$0.18 vs 5.88). Consistent advantage across three datasets. Anamnesis d=256 achieves \textbf{2.42 PPL} (3 seeds, $\pm$0.02), 28.4\% better than Transformer d=256 (3.38$\pm$0.07). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
 \end{abstract}
 
 \section{Introduction}
@@ -128,7 +128,7 @@ WikiText-2 & 256 & 4.48 & 4.75 & \textbf{-5.7\%} \\
 
 Anamnesis outperforms Transformer consistently across all three datasets.
 The advantage is largest on TinyStories (46.0\%) whose repetitive children's-story patterns
-maximize Engram's N-gram lookup value, and smallest on WikiText-2 (18.1\%) which has
+maximize Engram's N-gram lookup value, and smallest on WikiText-2 (15.8\%) which has
 more diverse vocabulary. Shakespeare falls in between (20.8\%). See Figure~\ref{fig:cross_dataset}.
 
 \begin{figure}[h]
