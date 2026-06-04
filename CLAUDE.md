@@ -1381,6 +1381,10 @@ on diverse vocabulary (WikiText-2 18%). Advantage correlates with N-gram repetit
 **WikiText-2 d=256**: Anamnesis 4.48 vs Transformer 4.75 (-5.7%). Smallest advantage —
 diverse WikiText-2 vocabulary at d=256 reduces Engram's SNR.
 
+**RetNet scaling anomaly on WikiText-2**: RetNet 8h+lw d=256 gets 6.68 PPL, WORSE than
+d=128 (6.19). Transformer improves with width (5.88→4.75). RetNet doesn't scale on diverse data.
+Engram compensates: 6.68→4.48 (-33%), even larger than d=128 (-20%).
+
 ## Autonomous Research Loop
 
 ### Objective
