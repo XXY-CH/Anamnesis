@@ -21,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{46.0\%} (2.82$\pm$0.03 vs 5.22). On WikiText-2, \textbf{15.8\%} (4.95$\pm$0.18 vs 5.88). Consistent advantage across three datasets. Anamnesis d=256 achieves \textbf{2.42 PPL} (3 seeds, $\pm$0.02), 28.4\% better than Transformer d=256 (3.38$\pm$0.07). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
+We present Anamnesis, a RetNet-based architecture achieving state-of-the-art perplexity for small dense models through two orthogonal innovations: \textbf{layerwise gamma scheduling} and \textbf{scalar-gated Engram hash tables}. On Shakespeare char-level language modeling with matched learning rate ($10^{-3}$), Anamnesis d=128 achieves \textbf{3.12 PPL} (3 seeds, $\pm$0.11) — 20.8\% better than Transformer d=128 (3.94$\pm$0.07) with non-overlapping confidence intervals. On TinyStories (10M chars), the advantage is \textbf{46.0\%} (2.82$\pm$0.03 vs 5.22). On WikiText-2, \textbf{21.9\%} (4.59$\pm$0.33 vs 5.88). Consistent advantage across three datasets. Anamnesis d=256 achieves \textbf{2.42 PPL} (3 seeds, $\pm$0.02), 28.4\% better than Transformer d=256 (3.38$\pm$0.07). Through fair ablation, we decompose the improvement: layerwise gamma contributes 43.6\% and Engram 56.4\% at d=128, with contributions flipping at d=256. Recurrent inference provides O(1) per-token decoding at $\sim$140 tok/s (bare RetNet), independent of sequence length. A contrastive chunk retrieval pipeline extends context to 1M tokens with EM=1.000. We also identify Engram's scalability limit: hash collision SNR renders it ineffective for BPE tokenization.
 \end{abstract}
 
 \section{Introduction}
@@ -120,7 +120,7 @@ Dataset & d & Anamnesis & Transformer & $\Delta$ \\
 Shakespeare (3 seeds) & 128 & 3.12$\pm$0.11 & 3.94$\pm$0.07 & \textbf{-20.8\%} \\
 Shakespeare (3 seeds) & 256 & 2.42$\pm$0.02 & 3.38$\pm$0.07 & \textbf{-28.4\%} \\
 TinyStories (3 seeds) & 128 & 2.82$\pm$0.03 & 5.22 & \textbf{-46.0\%} \\
-WikiText-2 (2 seeds) & 128 & 4.95$\pm$0.18 & 5.88$\pm$0.00 & \textbf{-15.8\%} \\
+WikiText-2 (2 seeds) & 128 & 4.59$\pm$0.33 & 5.88 & \textbf{-21.9\%} \\
 WikiText-2 & 256 & 4.48 & 4.75 & \textbf{-5.7\%} \\
 TinyStories & 256 & 2.43 & \textbf{2.25} & +8.0\% \\
 \bottomrule
@@ -213,11 +213,13 @@ Transformer pipeline: EM$\rightarrow$0 beyond 8K (hidden states non-discriminati
 
 \subsection{BPE Scalability Limit}
 
-Engram effective for char-level (collision 2.7\%) but harmful for BPE (collision 99.99\%).
-Increasing slots from 8K to 64K makes BPE \emph{worse} (PPL 184$\rightarrow$234): BPE tokens are
-high-dimensional abstractions that do not form meaningful N-gram patterns.
-Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47--48), where $K$=slots, $S$=occurrences, $M$=n-gram space.
-For BPE, $M$ grows exponentially with vocab size, rendering Engram fundamentally ineffective.
+Engram effective for char-level (collision 2.7\%) but unreliable for BPE.
+Multi-seed BPE experiments (lr=$10^{-3}$, WikiText-2, d=128) reveal high variance:
+Anamnesis std=11.4 (s42: 67.49, s100: 83.63) vs Transformer std=3.3 (s42: 72.37, s100: 67.67).
+Bare RetNet 8h+layerwise is stable (std=2.7), confirming Engram is the variance source.
+At low SNR (BPE: $M = V^n = 69$B), the scalar gate's learning is initialization-dependent---some
+seeds learn useful filters, others do not. 2-seed mean: Transformer wins by 7.3\% (70.02 vs 75.56).
+Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47--48). For BPE, Engram should be disabled.
 
 \section{Analysis}
 
@@ -245,7 +247,7 @@ For BPE, $M$ grows exponentially with vocab size, rendering Engram fundamentally
 \section{Limitations}
 
 \begin{itemize}
-\item Engram ineffective for BPE/subword tokenization---even 64K slots make it worse (PPL 184$\rightarrow$234, Proof~48).
+\item Engram unreliable for BPE/subword tokenization---high variance (std=11.4 vs Transformer std=3.3) due to initialization-dependent gate learning at low SNR (Proof~48).
 \item Recurrent mode slower than parallel (40--140 tok/s vs 10--50K tok/s).
 \item Evaluated on small-scale datasets (Shakespeare, TinyStories, WikiText-2).
 \item Multi-needle retrieval near random (top-2 recall 20\%).
@@ -256,7 +258,7 @@ For BPE, $M$ grows exponentially with vocab size, rendering Engram fundamentally
 
 Anamnesis demonstrates that layerwise gamma scheduling is a fundamental improvement to RetNet, yielding 15--22\% PPL reduction with zero additional parameters. Adding scalar-gated Engram hash tables provides further 20--35\% improvement at d=128, though Engram is conditionally beneficial: it helps on char-level/small-vocab data but hurts on BPE (Proof~48) and at large model widths where the base model is already strong. Key results: (1) Anamnesis d=128 beats Transformer d=128 by 21--46\% across three datasets with non-overlapping confidence intervals. (2) Bare RetNet 8h+layerwise alone beats Transformer d=256 on TinyStories (2.20 vs 2.25). (3) O(1) recurrent inference empirically proven at constant throughput. (4) 1M token retrieval with EM=1.000 via external chunk pipeline. The architecture separates concerns: layerwise gamma for universal quality, Engram for char-level enhancement, external retrieval for ultra-long context.
 
-\textbf{Limitations.} Engram ineffective for BPE/subword tokenization (Proof~48). Evaluated on small-scale datasets (Shakespeare, TinyStories, WikiText-2). Multi-needle retrieval near random (top-2 recall 20\%). RetNet does not scale as well as Transformer with width on diverse data (WikiText-2 anomaly).
+\textbf{Limitations.} Engram unreliable for BPE due to high variance from initialization-dependent gate learning (std=11.4, Proof~48). Evaluated on small-scale datasets (Shakespeare, TinyStories, WikiText-2). Multi-needle retrieval near random (top-2 recall 20\%). RetNet does not scale as well as Transformer with width on diverse data (WikiText-2 anomaly).
 
 \textbf{Future work.} (1) Scale to larger datasets (WikiText-103, OpenWebText). (2) Iterative retrieval for multi-hop reasoning. (3) Explore alternative static memory for BPE tokenization. (4) Pre-training validation on diverse domains.
 
