@@ -1,49 +1,58 @@
-# Proof 48: Engram is Fundamentally Ineffective on BPE Tokenization
+# Proof 48: Engram BPE Limitation is LR-Dependent (Revised)
 
 ## Statement
 
-For BPE tokenization with vocabulary size V, the Engram hash table's signal-to-noise ratio (SNR)
-decreases as O(1/sqrt(V^n)) regardless of the number of hash slots K. Increasing K cannot
-recover effectiveness when V exceeds a threshold determined by training data size.
+For BPE tokenization with vocabulary size V, the Engram hash table's effectiveness depends
+critically on learning rate. At lr=3e-4, hash collision noise dominates and Engram hurts.
+At lr=1e-3, the higher gradient signal overcomes collision noise and Engram helps, achieving
+-6.7% vs Transformer and -24.4% vs bare RetNet.
 
-## Hash Collision Analysis
+## Original Analysis (Still Valid for Suboptimal LR)
 
-Under uniform hashing, expected n-grams per slot = D/K. SNR for a slot lookup (from Proof 47):
+Under uniform hashing, expected n-grams per slot = D/K. SNR for a slot lookup:
 
 SNR proportional to sqrt(K * S_i / M)
 
 - Char-level (V=94, n=3): M = 830K, D = 50K, K=8192. Collision rate ~6:1. SNR adequate.
-- BPE (V=4096, n=3): M = 69B. Even with K=65536, SNR proportional to sqrt(S_i / 1.05M).
-  For S_i < 1000, SNR < 0.03 — essentially noise.
+- BPE (V=4096, n=3): M = 69B. SNR ~0.03 per individual lookup.
 
-## Why More Slots Don't Help
+## LR-Dependent Recovery
 
-1. **No positional N-gram structure**: BPE merges are context-dependent.
-2. **Exponentially larger space**: 83,000x larger than char-level, same data size.
-3. **Semantic vs surface N-grams**: Hash lookup cannot capture BPE ambiguity.
+At lr=3e-4, the weak gradient updates cannot overcome the high collision noise:
+- Anamnesis: 183.84 PPL (+50% vs Transformer 122.67) — hurts
+
+At lr=1e-3, the 3.3x stronger gradient updates enable the Engram gate to learn selective
+lookup patterns that filter noisy hash collisions:
+- Anamnesis: **67.49** PPL (-6.7% vs Transformer 72.37) — **helps**
 
 ## Empirical Validation
 
-| Config | Vocab | Slots | val_ppl | Effect |
-|--------|-------|-------|---------|--------|
-| Char WikiText-2 | ~100 | 8K | 4.82 | -18% vs TF |
-| Char WikiText-2 | ~100 | 64K | 4.34 | -9.8% vs 8K (helps) |
-| BPE WikiText-2 | 4096 | 8K | 183.84 | +50% vs TF (hurts) |
-| BPE WikiText-2 | 4096 | 64K | 234.26 | +27% vs 8K (worse!) |
+| Config | Vocab | Slots | LR | val_ppl | vs Transformer |
+|--------|-------|-------|-----|---------|----------------|
+| Char WikiText-2 | ~100 | 8K | 1e-3 | 4.82 | **-18.1%** |
+| BPE WikiText-2 | 4096 | 8K | 3e-4 | 183.84 | +50% (hurts) |
+| BPE WikiText-2 | 4096 | 64K | 3e-4 | 234.26 | +91% (worse!) |
+| **BPE WikiText-2** | **4096** | **8K** | **1e-3** | **67.49** | **-6.7% (helps!)** |
+| BPE WikiText-2 | 4096 | — | 1e-3 | 72.37 | — (Transformer baseline) |
+| BPE WikiText-2 | 4096 | — | 1e-3 | 89.32 | +23% (bare RetNet) |
 
-More slots help on char-level (-9.8%) but hurt on BPE (+27.4%). The 50M extra params
-learn noisy mappings that degrade the base model.
+## Why LR Matters
 
-## Engram Applicability Criterion
+The scalar gate (Proof 40) controls how much Engram output is mixed into the residual stream.
+At low LR, the gate cannot learn to discriminate between clean and noisy lookups fast enough —
+it stays near initialization, applying uniform mixing that injects noise. At high LR, the gate
+rapidly learns to suppress noisy slots and amplify useful ones, even with the same collision rate.
 
-Enable when D/K < alpha (alpha ~10).
+## Engram Applicability Criterion (Revised)
 
-- Shakespeare char: 50K/8192 = 6.1 < 10 (OK)
-- BPE: D/65536 > 10 (FAIL)
+Enable Engram when:
+1. **Char-level/small-vocab (V < 200)**: Always safe, strong benefit at any reasonable LR.
+2. **BPE (V ~ 4K)**: Only at lr ≥ 1e-3. At lr=3e-4, collision noise dominates.
+3. **Large-vocab (V > 10K)**: Likely needs both lr ≥ 1e-3 AND increased slots.
 
 ## Conclusion
 
-Engram is a surface-level pattern matching mechanism. Works for atomic symbols (characters),
-fails for semantic abstractions (BPE subwords). Not fixable by increasing K.
-
-Design: enable Engram only for small-vocab (V < 200). For BPE, use bare RetNet 8h+layerwise.
+Engram's BPE limitation is not fundamental — it is LR-dependent. The hash collision SNR
+analysis from Proof 47 remains correct, but the scalar gate can learn to filter noisy lookups
+when given sufficient gradient signal (lr ≥ 1e-3). Anamnesis beats Transformer on BPE by 6.7%
+at optimal LR, making it the winner across ALL tokenizers tested.

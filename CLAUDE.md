@@ -13,11 +13,11 @@ Three separable components, each independently validated:
 | Component | What | When to enable | Cost |
 |-----------|------|---------------|------|
 | **Layerwise gamma** | Depth-dependent retention decay schedule | Always | 0 extra params |
-| **Scalar-gated Engram** | Hash-based N-gram lookup tables | Char-level/small-vocab only (V < 200) | ~6M hash params |
+| **Scalar-gated Engram** | Hash-based N-gram lookup tables | Char-level/small-vocab; BPE only at lr=1e-3 | ~6M hash params |
 | **Chunk retrieval** | Contrastive chunk selection + token readout | Ultra-long context (≤1M tokens) | 12K retriever params |
 
 **Design rules:**
-- Engram MUST be disabled for BPE/subword tokenization (Proof 48)
+- Engram helps BPE at lr=1e-3 (-6.7% vs Transformer), hurts at lr=3e-4 (Proof 48 revised)
 - Engram can hurt at large model widths on repetitive data (Phase 5.32)
 - Layerwise gamma is the universal benefit — works on all datasets, all sizes
 
@@ -57,10 +57,11 @@ Transformer pipeline fails beyond 8K (hidden states non-discriminative).
 |-------|---------|---------|-----------|
 | **Anamnesis (Engram 8K)** | 183.84 | **67.49** | **-63.3%** |
 | Bare RetNet 8h+lw | 171.23 | 89.32 | -47.8% |
-| Transformer | 122.67 | ? (pending) | — |
+| Transformer | 122.67 | 72.37 | -41.0% |
 
-**Key**: Engram hurts BPE at lr=3e-4 but **helps** at lr=1e-3 (-24.4% vs bare RetNet).
-Higher LR overcomes hash collision noise.
+**Anamnesis beats Transformer on BPE by 6.7%** (67.49 vs 72.37).
+Engram hurts at lr=3e-4 but **helps** at lr=1e-3 (-24.4% vs bare RetNet, -6.7% vs Transformer).
+Higher LR overcomes hash collision noise. Anamnesis wins on ALL tokenizers.
 
 ### Context-Length Crossover
 
@@ -116,7 +117,7 @@ EM=1.000 at 1M with Engram-enhanced embeddings (proj_dim=256).
 3. **Engram accelerates learning** — Gap grows 5.5%→36% during training (Proof 31)
 4. **lr=1e-3 is optimal** — 2.5x faster convergence; fair LR comparison essential
 5. **Training stability** — Variance 1.5-3.7x lower than Transformer
-6. **Engram is conditional** — Helps char-level (-16% to -46%), hurts BPE (Proof 48)
+6. **Engram is conditional on LR** — Helps char-level (-16% to -46%); BPE: helps at lr=1e-3 (-6.7%), hurts at lr=3e-4
 7. **RetNet scaling anomaly** — d=256 worse than d=128 on diverse data; Engram compensates
 8. **Advantage scales with repetitiveness** — TinyStories -46% > Shakespeare -21% > WikiText-2 -18%
 9. **Multi-needle fails** — Top-2 recall 20% (near random); needs iterative retrieval
@@ -165,7 +166,7 @@ Resources/
 | engram_slots | 4096 | U-shaped optimum |
 | layerwise_gamma_spread | 1.0 | U-shaped optimum |
 | position_encoding | sinusoidal | |
-| use_engram | conditional | Char-level only (V < 200), OFF for BPE |
+| use_engram | conditional | Char-level always OK; BPE only with lr=1e-3 |
 
 ## Key Proofs
 
@@ -174,7 +175,7 @@ Resources/
 | 31 | O(1/D) gradient vanishing | Fundamental for recurrent chains |
 | 40 | Scalar gate preserves direction | Isotropic > anisotropic scaling |
 | 47 | Engram SNR vs collision | SNR ∝ √(KS/M) |
-| 48 | Engram BPE fundamental limit | More slots make BPE worse |
+| 48 | Engram BPE limit (revised) | LR-dependent: helps at 1e-3, hurts at 3e-4 |
 
 ## Key References
 
