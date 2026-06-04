@@ -1352,6 +1352,26 @@ input-dependent parameters are most expressive.
 Mamba training speed: 1,381 tok/s (sequential scan) vs Anamnesis 23,375 tok/s (17x slower).
 Production Mamba uses CUDA parallel scan kernel — our implementation is for baseline comparison only.
 
+### Phase 5.31: WikiText-2 Cross-Dataset Validation (COMPLETE)
+
+**WikiText-2 char-level LM** (lr=1e-3, 5K steps, d=128, seed=42):
+
+| Model | val_ppl | Δ vs Transformer |
+|-------|---------|-----------------|
+| **Anamnesis 8h+lw+Eng** | **4.82** | **-18.1%** |
+| Transformer 8h | 5.88 | — |
+
+**Three-dataset consistency** (all lr=1e-3 matched, d=128):
+
+| Dataset | Anamnesis | Transformer | Δ |
+|---------|-----------|-------------|---|
+| Shakespeare (3 seeds) | 3.12±0.11 | 3.94±0.07 | -20.8% |
+| TinyStories (3 seeds) | 2.82±0.03 | 5.22 | -46.0% |
+| WikiText-2 (1 seed) | 4.82 | 5.88 | -18.1% |
+
+Anamnesis advantage is consistent: largest on repetitive data (TinyStories 46%), smallest
+on diverse vocabulary (WikiText-2 18%). Advantage correlates with N-gram repetition rate.
+
 ## Autonomous Research Loop
 
 ### Objective
