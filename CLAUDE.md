@@ -1381,6 +1381,30 @@ on diverse vocabulary (WikiText-2 18%). Advantage correlates with N-gram repetit
 **WikiText-2 d=256**: Anamnesis 4.48 vs Transformer 4.75 (-5.7%). Smallest advantage —
 diverse WikiText-2 vocabulary at d=256 reduces Engram's SNR.
 
+### Phase 5.32: TinyStories d=256 Complete Ablation (COMPLETE)
+
+**TinyStories d=256 decomposition** (lr=1e-3, 5K steps, seed=42):
+
+| Model | val_ppl | Δ vs Transformer |
+|-------|---------|-----------------|
+| **Bare RetNet 8h+lw** | **2.20** | **-2.2%** |
+| Transformer | 2.25 | — |
+| Anamnesis 8h+lw+Eng | 2.43 | +8.0% |
+
+**Critical finding**: Engram HURTS at TinyStories d=256 (+10.5% vs bare RetNet).
+Layerwise gamma alone makes bare RetNet beat Transformer at d=256.
+
+**Complete d=256 ablation across datasets:**
+
+| Dataset | Bare RetNet | + Engram | Transformer | Engram effect |
+|---------|------------|----------|-------------|---------------|
+| Shakespeare | 4.31 | 3.44 | 4.40 | -20.2% (helps) |
+| TinyStories | 2.20 | 2.43 | 2.25 | +10.5% (hurts) |
+| WikiText-2 | 6.68 | 4.48 | 4.75 | -33.0% (helps) |
+
+Engram helps on 2/3 datasets at d=256, hurts on TinyStories where base model
+is already strong. Layerwise gamma is the universal benefit.
+
 **RetNet scaling anomaly on WikiText-2**: RetNet 8h+lw d=256 gets 6.68 PPL, WORSE than
 d=128 (6.19). Transformer improves with width (5.88→4.75). RetNet doesn't scale on diverse data.
 Engram compensates: 6.68→4.48 (-33%), even larger than d=128 (-20%).
