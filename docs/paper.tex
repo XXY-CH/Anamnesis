@@ -245,19 +245,20 @@ For BPE, $M$ grows exponentially with vocab size, rendering Engram fundamentally
 \section{Limitations}
 
 \begin{itemize}
-\item Engram ineffective for BPE/subword tokenization (Proof~47).
+\item Engram ineffective for BPE/subword tokenization---even 64K slots make it worse (PPL 184$\rightarrow$234, Proof~48).
 \item Recurrent mode slower than parallel (40--140 tok/s vs 10--50K tok/s).
-\item Evaluated on Shakespeare (small dataset) and TinyStories (children's stories).
-\item Multi-needle retrieval: top-2 recall is only 20\% (near random baseline of 16.7\%) when placing 2 needles in 4 chunks. The contrastive retriever fails to identify multiple relevant chunks simultaneously because the query hidden state is computed from local context only and carries no signal about needle positions in other chunks.
+\item Evaluated on small-scale datasets (Shakespeare, TinyStories, WikiText-2).
+\item Multi-needle retrieval near random (top-2 recall 20\%).
+\item RetNet scaling anomaly: worsens d=128$\rightarrow$d=256 on diverse data (WikiText-2).
 \end{itemize}
 
 \section{Conclusion}
 
-Anamnesis demonstrates that two simple innovations---layerwise gamma scheduling and scalar-gated Engram hash tables---substantially improve small model LM quality while maintaining O(1) inference. Key results: (1) 21.9\% PPL improvement over Transformer at d=128 on Shakespeare with matched lr, 31.3\% on TinyStories, both with non-overlapping confidence intervals. (2) O(1) recurrent inference empirically proven: constant $\sim$140 tok/s across all sequence lengths. (3) 1M token retrieval with EM=1.000. (4) The optimal learning rate ($10^{-3}$) enables Anamnesis d=256 to achieve 2.42 PPL, 28.4\% better than Transformer.
+Anamnesis demonstrates that layerwise gamma scheduling is a fundamental improvement to RetNet, yielding 15--22\% PPL reduction with zero additional parameters. Adding scalar-gated Engram hash tables provides further 20--35\% improvement at d=128, though Engram is conditionally beneficial: it helps on char-level/small-vocab data but hurts on BPE (Proof~48) and at large model widths where the base model is already strong. Key results: (1) Anamnesis d=128 beats Transformer d=128 by 21--46\% across three datasets with non-overlapping confidence intervals. (2) Bare RetNet 8h+layerwise alone beats Transformer d=256 on TinyStories (2.20 vs 2.25). (3) O(1) recurrent inference empirically proven at constant throughput. (4) 1M token retrieval with EM=1.000 via external chunk pipeline. The architecture separates concerns: layerwise gamma for universal quality, Engram for char-level enhancement, external retrieval for ultra-long context.
 
-\textbf{Limitations.} Engram is ineffective for BPE/subword tokenization (Proof~47). Evaluated primarily on Shakespeare (small dataset, high seed variance). Multi-hop reasoning evaluation remains future work.
+\textbf{Limitations.} Engram ineffective for BPE/subword tokenization (Proof~48). Evaluated on small-scale datasets (Shakespeare, TinyStories, WikiText-2). Multi-needle retrieval near random (top-2 recall 20\%). RetNet does not scale as well as Transformer with width on diverse data (WikiText-2 anomaly).
 
-\textbf{Future work.} (1) Scale to larger datasets (WikiText-103, OpenWebText). (2) Iterative retrieval for multi-hop reasoning---find first needle, condition query, search again. (3) Adapt Engram for subword tokenization via adaptive slot sizing. (4) Pre-training on diverse domains to validate generalization.
+\textbf{Future work.} (1) Scale to larger datasets (WikiText-103, OpenWebText). (2) Iterative retrieval for multi-hop reasoning. (3) Explore alternative static memory for BPE tokenization. (4) Pre-training validation on diverse domains.
 
 \appendix
 \section{Proofs}
