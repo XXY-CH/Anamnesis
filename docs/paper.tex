@@ -158,6 +158,8 @@ Total improvement & -62.2\% & & -56.9\% & \\
 \end{tabular}
 \end{table*}
 
+\textbf{RetNet scaling anomaly.} On WikiText-2, bare RetNet 8h+lw gets \emph{worse} from d=128 (PPL=6.19) to d=256 (PPL=6.68), while Transformer improves (5.88$\to$4.75). RetNet's recurrent mechanism does not scale favorably on diverse vocabulary. Engram compensates: the d=256 Engram contribution is -33\% (6.68$\to$4.48), larger than d=128's -20\%, making Anamnesis the only d=256 model to beat Transformer on this dataset.
+
 \subsection{O(1) Recurrent Inference}
 
 \begin{table*}[h]
