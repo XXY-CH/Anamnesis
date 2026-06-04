@@ -17,7 +17,7 @@ Three separable components, each independently validated:
 | **Chunk retrieval** | Contrastive chunk selection + token readout | Ultra-long context (≤1M tokens) | 12K retriever params |
 
 **Design rules:**
-- Engram helps BPE at lr=1e-3 (-6.7% vs Transformer), hurts at lr=3e-4 (Proof 48 revised)
+- Engram helps BPE at lr=1e-3 in lucky seeds, but high variance makes it unreliable (Phase 5.34)
 - Engram can hurt at large model widths on repetitive data (Phase 5.32)
 - Layerwise gamma is the universal benefit — works on all datasets, all sizes
 
@@ -51,17 +51,17 @@ Contribution flips with model size: Engram dominant at d=128, layerwise dominant
 EM=1.000 at 1M tokens (2048 chunks) with Engram-enhanced embeddings.
 Transformer pipeline fails beyond 8K (hidden states non-discriminative).
 
-### BPE Results (WikiText-2, d=128, 5K steps, seed=42)
+### BPE Results (WikiText-2, d=128, 5K steps)
 
-| Model | lr=3e-4 | lr=1e-3 | Δ from LR |
-|-------|---------|---------|-----------|
-| **Anamnesis (Engram 8K)** | 183.84 | **67.49** | **-63.3%** |
-| Bare RetNet 8h+lw | 171.23 | 89.32 | -47.8% |
-| Transformer | 122.67 | 72.37 | -41.0% |
+| Model | lr=3e-4 | lr=1e-3 (s42) | lr=1e-3 (s100) | Mean ± std |
+|-------|---------|---------------|----------------|-----------|
+| **Transformer** | 122.67 | 72.37 | **67.67** | **70.02 ± 3.3** |
+| Anamnesis (Engram 8K) | 183.84 | **67.49** | 83.63 | 75.56 ± 11.4 |
+| Bare RetNet 8h+lw | 171.23 | 89.32 | — | — |
 
-**Anamnesis beats Transformer on BPE by 6.7%** (67.49 vs 72.37).
-Engram hurts at lr=3e-4 but **helps** at lr=1e-3 (-24.4% vs bare RetNet, -6.7% vs Transformer).
-Higher LR overcomes hash collision noise. Anamnesis wins on ALL tokenizers.
+**BPE is seed-dependent**: Anamnesis wins at s42 (67.49 vs 72.37) but loses at s100 (83.63 vs 67.67).
+Engram introduces high variance on BPE (std=11.4). Transformer more stable (std=3.3).
+Anamnesis reliably wins on char-level (5/6 comparisons). BPE result is inconclusive.
 
 ### Context-Length Crossover
 
@@ -117,7 +117,7 @@ EM=1.000 at 1M with Engram-enhanced embeddings (proj_dim=256).
 3. **Engram accelerates learning** — Gap grows 5.5%→36% during training (Proof 31)
 4. **lr=1e-3 is optimal** — 2.5x faster convergence; fair LR comparison essential
 5. **Training stability** — Variance 1.5-3.7x lower than Transformer
-6. **Engram is conditional on LR** — Helps char-level (-16% to -46%); BPE: helps at lr=1e-3 (-6.7%), hurts at lr=3e-4
+6. **Engram is conditional on LR** — Helps char-level (-16% to -46%); BPE: high variance, seed-dependent (Phase 5.34)
 7. **RetNet scaling anomaly** — d=256 worse than d=128 on diverse data; Engram compensates
 8. **Advantage scales with repetitiveness** — TinyStories -46% > Shakespeare -21% > WikiText-2 -18%
 9. **Multi-needle fails** — Top-2 recall 20% (near random); needs iterative retrieval
@@ -166,7 +166,7 @@ Resources/
 | engram_slots | 4096 | U-shaped optimum |
 | layerwise_gamma_spread | 1.0 | U-shaped optimum |
 | position_encoding | sinusoidal | |
-| use_engram | conditional | Char-level always OK; BPE only with lr=1e-3 |
+| use_engram | conditional | Char-level always OK; BPE high variance, not recommended |
 
 ## Key Proofs
 
