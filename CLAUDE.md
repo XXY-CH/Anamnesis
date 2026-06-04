@@ -51,10 +51,16 @@ Contribution flips with model size: Engram dominant at d=128, layerwise dominant
 EM=1.000 at 1M tokens (2048 chunks) with Engram-enhanced embeddings.
 Transformer pipeline fails beyond 8K (hidden states non-discriminative).
 
-### BPE Limitation
+### BPE Results (WikiText-2, d=128, 5K steps, seed=42)
 
-Engram fails on BPE (Proof 48): 64K slots → PPL=234 (worse than 8K → 184, worse than Transformer → 123).
-BPE tokens are semantic abstractions, not meaningful N-grams.
+| Model | lr=3e-4 | lr=1e-3 | Δ from LR |
+|-------|---------|---------|-----------|
+| **Anamnesis (Engram 8K)** | 183.84 | **67.49** | **-63.3%** |
+| Bare RetNet 8h+lw | 171.23 | 89.32 | -47.8% |
+| Transformer | 122.67 | ? (pending) | — |
+
+**Key**: Engram hurts BPE at lr=3e-4 but **helps** at lr=1e-3 (-24.4% vs bare RetNet).
+Higher LR overcomes hash collision noise.
 
 ### Context-Length Crossover
 
