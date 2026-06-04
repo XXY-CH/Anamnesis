@@ -1,5 +1,5 @@
-\documentclass{article}
-\usepackage[margin=1in]{geometry}
+\documentclass[twocolumn]{article}
+\usepackage[margin=0.75in]{geometry}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -88,7 +88,7 @@ All models: 8 layers, CosineAnnealingLR with T\_max=steps.
 
 \subsection{Main Results}
 
-\begin{table}[h]
+\begin{table*}[h]
 \centering
 \caption{Shakespeare char-level PPL at 5K steps (T\_max=5000, lr$=10^{-3}$). Matched hyperparameters. 2--3 seeds. $^\dagger$Mamba at seq\_len=128, 1000 steps (sequential scan without CUDA kernel); Anamnesis at seq\_len=128, 1000 steps achieves PPL=5.53, suggesting Mamba excels at short context while Anamnesis benefits from longer sequences.}
 \begin{tabular}{lccccc}
@@ -106,11 +106,11 @@ Transformer & 256 & 6.6M & 3.38 & 0.07 & — \\
 Bare RetNet 8h+lw & 256 & 6.4M & 4.31 & — & +29\% \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Cross-Dataset Validation}
 
-\begin{table}[h]
+\begin{table*}[h]
 \centering
 \caption{Cross-dataset char-level PPL at 5K steps (lr$=10^{-3}$, 8 layers).}
 \begin{tabular}{lcccc}
@@ -124,7 +124,7 @@ WikiText-2 (2 seeds) & 128 & 4.95$\pm$0.18 & 5.88$\pm$0.00 & \textbf{-15.8\%} \\
 WikiText-2 & 256 & 4.48 & 4.75 & \textbf{-5.7\%} \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 Anamnesis outperforms Transformer consistently across all three datasets.
 The advantage is largest on TinyStories (46.0\%) whose repetitive children's-story patterns
@@ -140,7 +140,7 @@ more diverse vocabulary. Shakespeare falls in between (20.8\%). See Figure~\ref{
 
 \subsection{Fair Ablation}
 
-\begin{table}[h]
+\begin{table*}[h]
 \centering
 \caption{Ablation with matched lr$=10^{-3}$, T\_max=5000 (seed=42).}
 \begin{tabular}{lcccc}
@@ -156,11 +156,11 @@ Baseline (4h, lr=3e-4) & 7.99 & — & 5.57 & — \\
 Total improvement & -62.2\% & & -56.9\% & \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{O(1) Recurrent Inference}
 
-\begin{table}[h]
+\begin{table*}[h]
 \centering
 \caption{Recurrent inference throughput (tok/s) on MPS, d=128.}
 \begin{tabular}{lccccc}
@@ -172,14 +172,14 @@ RetNet recurrent & 114 & 144 & 149 & 160 & 134 \\
 Transformer (parallel) & 21.9K & 44.1K & 52.8K & 35.0K & 22.5K \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 Recurrent throughput is \textbf{constant} $\rightarrow$ O(1) per-token inference.
 Transformer has no recurrent mode; forced O($N^2$) parallel.
 
 \subsection{Inference Latency Profiling}
 
-\begin{table}[h]
+\begin{table*}[h]
 \centering
 \caption{Parallel forward latency (ms, batch=1) on MPS. d=128, 8 layers.}
 \begin{tabular}{lcccc}
@@ -191,7 +191,7 @@ Transformer & 5.0 & 9.5 & 29.5 & 88.2 \\
 Linear Attention & 4.2 & 4.2 & 5.0 & 7.7 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 Anamnesis overhead ratio decreases from 2.5$\times$ (seq=128) to 1.5$\times$ (seq=2048)
 relative to Transformer. At d=256, the ratio is 1.2--1.3$\times$.
