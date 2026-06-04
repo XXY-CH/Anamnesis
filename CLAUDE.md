@@ -1405,6 +1405,15 @@ Layerwise gamma alone makes bare RetNet beat Transformer at d=256.
 Engram helps on 2/3 datasets at d=256, hurts on TinyStories where base model
 is already strong. Layerwise gamma is the universal benefit.
 
+**Engram 64K slots char-level WikiText-2** (d=128, lr=1e-3, 5K steps, seed=42):
+
+| Slots | val_ppl | Δ vs 8192 slots |
+|-------|---------|----------------|
+| 8192 | 4.82 | — |
+| **65536** | **4.34** | **-9.8%** |
+
+More slots helps char-level data. BPE test pending.
+
 **RetNet scaling anomaly on WikiText-2**: RetNet 8h+lw d=256 gets 6.68 PPL, WORSE than
 d=128 (6.19). Transformer improves with width (5.88→4.75). RetNet doesn't scale on diverse data.
 Engram compensates: 6.68→4.48 (-33%), even larger than d=128 (-20%).
