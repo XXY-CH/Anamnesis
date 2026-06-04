@@ -1372,6 +1372,15 @@ Production Mamba uses CUDA parallel scan kernel — our implementation is for ba
 Anamnesis advantage is consistent: largest on repetitive data (TinyStories 46%), smallest
 on diverse vocabulary (WikiText-2 18%). Advantage correlates with N-gram repetition rate.
 
+**WikiText-2 ablation** (d=128, lr=1e-3, 5K steps):
+- Bare RetNet 8h+lw: 6.19 (+5.3% vs Transformer)
+- Transformer: 5.88
+- Anamnesis (8h+lw+Eng): 4.95 (-15.8% vs Transformer)
+- Engram contribution: -20.2% alone. RetNet alone worse than Transformer; Engram reverses gap.
+
+**WikiText-2 d=256**: Anamnesis 4.48 vs Transformer 4.75 (-5.7%). Smallest advantage —
+diverse WikiText-2 vocabulary at d=256 reduces Engram's SNR.
+
 ## Autonomous Research Loop
 
 ### Objective
