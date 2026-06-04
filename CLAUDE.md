@@ -1414,6 +1414,29 @@ is already strong. Layerwise gamma is the universal benefit.
 
 More slots helps char-level data. BPE test pending.
 
+### Phase 5.33: Engram 64K Slots on BPE — Fundamental Failure (COMPLETE)
+
+**BPE WikiText-2** (d=128, lr=1e-3, 5K steps, seed=42, vocab=4096):
+
+| Model | val_ppl |
+|-------|---------|
+| Transformer | 122.67 |
+| Anamnesis 8192 slots | 183.84 |
+| **Anamnesis 65536 slots** | **234.26** (WORST) |
+
+**CRITICAL: More Engram slots make BPE WORSE.** 234 vs 184 (+27%) with 8x more slots.
+
+**Root cause**: BPE tokens are high-dimensional abstractions, not meaningful N-grams.
+The Engram learns noisy, unhelpful associations that degrade the base model.
+
+**Conclusion**: Engram is strictly a char-level/small-vocab enhancement (Proof 48).
+For BPE/subword, Engram MUST be disabled.
+
+**Design implication**: Final architecture:
+- **Bare RetNet 8h+layerwise** — universal baseline
+- **+ Engram** — optional, char-level/small-vocab only
+- **+ External chunk retrieval** — ultra-long context
+
 **RetNet scaling anomaly on WikiText-2**: RetNet 8h+lw d=256 gets 6.68 PPL, WORSE than
 d=128 (6.19). Transformer improves with width (5.88→4.75). RetNet doesn't scale on diverse data.
 Engram compensates: 6.68→4.48 (-33%), even larger than d=128 (-20%).
