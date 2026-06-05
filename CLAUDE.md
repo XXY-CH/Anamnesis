@@ -64,6 +64,16 @@ Engram introduces high variance on BPE (std=11.4). Bare RetNet (std=2.7) and Tra
 **Variance source: Engram gate initialization** — low BPE SNR makes gate learning seed-dependent (Proof 48).
 Anamnesis reliably wins on char-level (5/6 comparisons). BPE: disable Engram for stable results.
 
+### 10K Steps Scaling (Shakespeare char-level, lr=1e-3, seed=42)
+
+| Model | 5K PPL | 10K PPL | Improvement | Δ at 10K |
+|-------|--------|---------|-------------|----------|
+| **Anamnesis** | 3.12 | **1.88** | **-39.7%** | **-35.8%** |
+| Transformer | 3.94 | 2.93 | -25.6% | — |
+
+Anamnesis improves 55% faster. Advantage grows: -20.8% (5K) → -35.8% (10K).
+Confirms Engram learning acceleration (Proof 31) compounds over training.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
