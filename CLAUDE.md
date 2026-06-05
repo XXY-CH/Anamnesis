@@ -74,6 +74,10 @@ Anamnesis reliably wins on char-level (5/6 comparisons). BPE: disable Engram for
 Anamnesis improves 55% faster. Advantage grows: -20.8% (5K) → -35.8% (10K).
 Confirms Engram learning acceleration (Proof 31) compounds over training.
 
+10K ablation: Bare RetNet 10K PPL=2.62 (from 4.11, -36.3%).
+RetNet+layerwise flips from -4.3% vs TF at 5K to +10.6% at 10K — needs more training to shine.
+Engram contribution grows: -24.1% (5K) → -28.2% (10K).
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
