@@ -166,6 +166,13 @@ Total improvement & -62.2\% & & -56.9\% & \\
 
 \textbf{RetNet scaling anomaly.} On WikiText-2, bare RetNet 8h+lw gets \emph{worse} from d=128 (PPL=6.19) to d=256 (PPL=6.68), while Transformer improves (5.88$\to$4.75). RetNet's recurrent mechanism does not scale favorably on diverse vocabulary. Engram compensates: the d=256 Engram contribution is -33\% (6.68$\to$4.48), larger than d=128's -20\%, making Anamnesis the only d=256 model to beat Transformer on this dataset.
 
+\subsection{Scaling with Training Duration}
+
+Training to 10K steps on Shakespeare char-level (d=128, lr=$10^{-3}$, seed=42) reveals compounding advantage:
+Anamnesis PPL drops from 3.12 to \textbf{1.88} (-39.7\%), while Transformer drops from 3.94 to 2.93 (-25.6\%).
+The relative advantage grows from -20.8\% (5K steps) to \textbf{-35.8\%} (10K steps).
+Anamnesis improves 55\% faster, confirming that Engram's learning acceleration (Proof~31) compounds over extended training.
+
 \subsection{O(1) Recurrent Inference}
 
 \begin{table*}[h]
