@@ -168,10 +168,12 @@ Total improvement & -62.2\% & & -56.9\% & \\
 
 \subsection{Scaling with Training Duration}
 
-Training to 10K steps on Shakespeare char-level (d=128, lr=$10^{-3}$, seed=42) reveals compounding advantage:
-Anamnesis PPL drops from 3.12 to \textbf{1.88} (-39.7\%), while Transformer drops from 3.94 to 2.93 (-25.6\%).
-The relative advantage grows from -20.8\% (5K steps) to \textbf{-35.8\%} (10K steps).
-Anamnesis improves 55\% faster, confirming that Engram's learning acceleration (Proof~31) compounds over extended training.
+Training to 10K steps on Shakespeare char-level (d=128, lr=$10^{-3}$, seed=42) reveals compounding advantage.
+Anamnesis drops from 3.12 to \textbf{1.88} (-39.7\%), bare RetNet 8h+layerwise from 4.11 to 2.62 (-36.3\%),
+and Transformer from 3.94 to 2.93 (-25.6\%).
+Two key observations: (1) RetNet+layerwise \emph{flips} from losing to Transformer at 5K (+4.3\%) to winning at 10K (-10.6\%)---RetNet needs more training to surpass Transformer.
+(2) Engram contribution \emph{grows}: from -24.1\% (5K) to -28.2\% (10K), confirming that Engram's learning acceleration (Proof~31) compounds over extended training.
+See Figure~\ref{fig:10k_curves}.
 
 \subsection{O(1) Recurrent Inference}
 
