@@ -78,6 +78,11 @@ Confirms Engram learning acceleration (Proof 31) compounds over training.
 RetNet+layerwise flips from -4.3% vs TF at 5K to +10.6% at 10K — needs more training to shine.
 Engram contribution grows: -24.1% (5K) → -28.2% (10K).
 
+TinyStories 10K: Anamnesis 2.38, Transformer 2.07 — **advantage REVERSES** (+14.9%).
+5K advantage (-46%) was due to Transformer undertraining. Transformer improves -60.3% (5K→10K) vs Anamnesis -15.6%.
+On diverse data (Shakespeare), Anamnesis advantage grows. On repetitive data (TinyStories), Transformer catches up.
+"Advantage scales with repetitiveness" is a 5K artifact — Transformer needs more training on repetitive patterns.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
