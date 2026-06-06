@@ -169,7 +169,7 @@ Total improvement & -62.2\% & & -56.9\% & \\
 \subsection{Scaling with Training Duration}
 
 Extended training reveals a dataset-dependent scaling pattern (d=128, lr=$10^{-3}$, seed=42).
-On Shakespeare (diverse vocabulary), the advantage \emph{monotonically increases}: -20.8\% (5K) $\to$ -35.8\% (10K) $\to$ \textbf{-42.4\%} (20K). Anamnesis: 3.12$\to$1.88$\to$\textbf{1.51}; Transformer: 3.94$\to$2.93$\to$2.62. Notably, Transformer at 20K steps (PPL=2.62) equals bare RetNet at only 10K steps---RetNet's recurrent mechanism scales more efficiently than attention on diverse data.
+On Shakespeare (diverse vocabulary), the advantage \emph{monotonically increases}: -20.8\% (5K) $\to$ -35.8\% (10K) $\to$ \textbf{-42.4\%} (20K). Anamnesis: 3.12$\to$1.88$\to$\textbf{1.51}; Transformer: 3.94$\to$2.93$\to$2.62. Ablation with bare RetNet 8h+layerwise reveals the source of scaling: RetNet vs Transformer advantage \emph{grows} from +4.3\% (losing at 5K) to -10.6\% (10K) to \textbf{-20.9\%} (20K)---RetNet's recurrent mechanism scales more efficiently than attention. Engram contribution is stable: -24.1\% (5K) $\to$ -28.2\% (10K) $\to$ -27.1\% (20K)---a constant accelerator, not compounding. The growing total advantage is \textbf{driven by RetNet+layerwise}, not Engram.
 
 On TinyStories (repetitive): the advantage \emph{reverses}. At 5K Anamnesis led by 46\%; at 10K Transformer leads by 14.9\% (PPL 2.07 vs 2.38). The Transformer's attention learns repetitive patterns efficiently given sufficient training.
 
