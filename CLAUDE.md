@@ -87,6 +87,10 @@ WikiText-2 10K: Anamnesis 3.94, Transformer 4.00 (-1.5%, barely wins).
 Complete 10K pattern: Shakespeare GROWS (-35.8%), WikiText-2 SHRINKS (-1.5%), TinyStories REVERSES (+14.9%).
 Advantage ∝ data diversity. Engram = learning accelerator, most valuable early in training on diverse data.
 
+Shakespeare 20K: Anamnesis 1.51, Transformer 2.62 (-42.4%).
+Advantage keeps growing: -20.8% (5K) → -35.8% (10K) → -42.4% (20K).
+Anamnesis improves 1.9x faster even 10K→20K. TF 20K (2.62) = bare RetNet 10K.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
