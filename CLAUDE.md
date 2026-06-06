@@ -91,6 +91,11 @@ Shakespeare 20K: Anamnesis 1.51, Transformer 2.62 (-42.4%).
 Advantage keeps growing: -20.8% (5K) → -35.8% (10K) → -42.4% (20K).
 Anamnesis improves 1.9x faster even 10K→20K. TF 20K (2.62) = bare RetNet 10K.
 
+Complete scaling ablation (Shakespeare char, seed=42):
+RetNet vs TF: +4.3% (5K) → -10.6% (10K) → -20.9% (20K) — RetNet is the scaling champion.
+Engram contribution: -24.1% (5K) → -28.2% (10K) → -27.1% (20K) — stable ~27% accelerator.
+Growing advantage is driven by RetNet+layerwise, NOT Engram.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
