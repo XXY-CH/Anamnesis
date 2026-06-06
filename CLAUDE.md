@@ -83,6 +83,10 @@ TinyStories 10K: Anamnesis 2.38, Transformer 2.07 — **advantage REVERSES** (+1
 On diverse data (Shakespeare), Anamnesis advantage grows. On repetitive data (TinyStories), Transformer catches up.
 "Advantage scales with repetitiveness" is a 5K artifact — Transformer needs more training on repetitive patterns.
 
+WikiText-2 10K: Anamnesis 3.94, Transformer 4.00 (-1.5%, barely wins).
+Complete 10K pattern: Shakespeare GROWS (-35.8%), WikiText-2 SHRINKS (-1.5%), TinyStories REVERSES (+14.9%).
+Advantage ∝ data diversity. Engram = learning accelerator, most valuable early in training on diverse data.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
