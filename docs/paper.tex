@@ -178,7 +178,7 @@ On TinyStories (repetitive): the advantage \emph{reverses}. At 5K Anamnesis led 
 On WikiText-2 (moderate diversity): Anamnesis \textbf{3.94} vs Transformer 4.00 (-1.5\% at 10K), shrinking from -18.1\% at 5K. Advantage is proportional to data diversity.
 
 At d=256, the pattern differs from d=128: advantage peaks at 10K then narrows. Anamnesis: 2.42 (5K) $\to$ 1.15 (10K) $\to$ \textbf{1.08} (20K); Transformer: 3.38 (5K) $\to$ 1.84 (10K) $\to$ 1.30 (20K). The advantage is -28.4\% (5K) $\to$ -37.5\% (10K) $\to$ -17.0\% (20K). Unlike d=128 where advantage grows monotonically, Transformer catches up at d=256 20K---likely because both models approach the entropy floor. Ablation with bare RetNet 8h+layerwise confirms the narrowing is at the RetNet level: bare RetNet achieves PPL=1.114 at d=256 20K (-14.3\% vs Transformer), while Engram adds only -3.1\% (1.08 vs 1.114). The convergence is architecture-level, not Engram-driven.
-See Figure~\ref{fig:10k_curves} and Figure~\ref{fig:d256_decomp}.
+See Figure~\ref{fig:scaling_ablation} and Figure~\ref{fig:d256_decomp}.
 
 \begin{figure}[h]
 \centering
