@@ -178,7 +178,28 @@ On TinyStories (repetitive): the advantage \emph{reverses}. At 5K Anamnesis led 
 On WikiText-2 (moderate diversity): Anamnesis \textbf{3.94} vs Transformer 4.00 (-1.5\% at 10K), shrinking from -18.1\% at 5K. Advantage is proportional to data diversity.
 
 At d=256, the pattern differs from d=128: advantage peaks at 10K then narrows. Anamnesis: 2.42 (5K) $\to$ 1.15 (10K) $\to$ \textbf{1.08} (20K); Transformer: 3.38 (5K) $\to$ 1.84 (10K) $\to$ 1.30 (20K). The advantage is -28.4\% (5K) $\to$ -37.5\% (10K) $\to$ -17.0\% (20K). Unlike d=128 where advantage grows monotonically, Transformer catches up at d=256 20K---likely because both models approach the entropy floor. Ablation with bare RetNet 8h+layerwise confirms the narrowing is at the RetNet level: bare RetNet achieves PPL=1.114 at d=256 20K (-14.3\% vs Transformer), while Engram adds only -3.1\% (1.08 vs 1.114). The convergence is architecture-level, not Engram-driven.
-See Figure~\ref{fig:10k_curves}.
+See Figure~\ref{fig:10k_curves} and Figure~\ref{fig:d256_decomp}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_paper_scaling_ablation.pdf}
+\caption{Scaling with training duration. Left: d=128---advantage grows monotonically. Right: d=256---advantage peaks at 10K then narrows as models approach entropy floor.}
+\label{fig:scaling_ablation}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{fig_paper_decomposition.pdf}
+\caption{Advantage decomposition at d=128. RetNet+layerwise advantage \emph{grows} with training (from +4.3\% to -20.9\%), while Engram provides stable $\sim$27\% acceleration.}
+\label{fig:decomposition}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{fig_paper_d256_decomposition.pdf}
+\caption{d=256 20K three-model decomposition. Bare RetNet accounts for -14.3\% of the advantage; Engram adds -3.1\%. The narrowing at 20K is RetNet-level (entropy floor), not Engram-driven.}
+\label{fig:d256_decomp}
+\end{figure}
 
 \subsection{O(1) Recurrent Inference}
 
@@ -243,7 +264,14 @@ Formal: SNR $\propto \sqrt{KS/M}$ (Proof 47--48). For BPE, Engram should be disa
 
 \textbf{Training stability.} Anamnesis variance is 1.5--3.7$\times$ lower than Transformer across all seeds and model sizes (0.15--0.29 vs 0.16--0.56). The architectural inductive bias (layerwise gamma + Engram) acts as an implicit regularizer, reducing initialization sensitivity.
 
-\textbf{Dataset-dependent scaling.} Anamnesis (RetNet+Engram) wins 5 of 6 dataset$\times$scale comparisons at 5K steps. Extended training reveals a nuanced picture: on diverse data (Shakespeare), the advantage \emph{grows} from -20.8\% (5K) to -35.8\% (10K). On repetitive data (TinyStories), Transformer catches up: from -46\% (5K) to +14.9\% (10K, Transformer wins). Engram's value is largest early in training when the base model is weakest---functioning as a learning accelerator rather than an asymptotic improvement. This suggests Anamnesis is most beneficial in compute-limited settings where models cannot be trained to convergence.
+\textbf{Dataset-dependent scaling.} Anamnesis (RetNet+Engram) wins 5 of 6 dataset$\times$scale comparisons at 5K steps. Extended training reveals a nuanced picture: on diverse data (Shakespeare), the advantage \emph{grows} from -20.8\% (5K) to -35.8\% (10K). On repetitive data (TinyStories), Transformer catches up: from -46\% (5K) to +14.9\% (10K, Transformer wins). Engram's value is largest early in training when the base model is weakest---functioning as a learning accelerator rather than an asymptotic improvement. This suggests Anamnesis is most beneficial in compute-limited settings where models cannot be trained to convergence. See Figure~\ref{fig:cross_diversity}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_paper_cross_dataset.pdf}
+\caption{Advantage scales with data diversity. Left: PPL comparison at 10K steps. Right: Anamnesis vs Transformer advantage---negative (blue) means Anamnesis wins. Advantage is largest on diverse data (Shakespeare -35.8\%) and reverses on repetitive data (TinyStories +14.9\%).}
+\label{fig:cross_diversity}
+\end{figure}
 
 \textbf{Scaling law exponents.} Fitting PPL $\propto$ steps$^b$ on Shakespeare d=128 reveals: Anamnesis $b{=}-0.523$, bare RetNet $b{=}-0.495$, Transformer $b{=}-0.294$. RetNet's exponent is $\sim$1.7$\times$ steeper than Transformer's, quantitatively explaining the growing advantage. At d=256, Anamnesis achieves $b{=}-0.582$ (steepest), confirming scaling efficiency improves with model capacity.
 
