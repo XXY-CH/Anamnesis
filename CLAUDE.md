@@ -100,6 +100,9 @@ d=256 Shakespeare 10K: Anamnesis 1.15, Transformer 1.84 (-37.5%).
 Cross-model-size validation: d=128 grows -20.8%→-35.8%→-42.4%; d=256 grows -28.4%→-37.5%.
 Advantage grows with training at BOTH model sizes. d=256 10K PPL=1.15 is remarkably low.
 
+d=256 Shakespeare 20K: PPL=1.08 (training loss=0.109, near-optimal).
+d=256 curve: 2.42 (5K) → 1.15 (10K) → 1.08 (20K). Decelerating as expected near convergence.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
