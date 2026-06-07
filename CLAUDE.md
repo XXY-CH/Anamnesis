@@ -96,6 +96,10 @@ RetNet vs TF: +4.3% (5K) → -10.6% (10K) → -20.9% (20K) — RetNet is the sca
 Engram contribution: -24.1% (5K) → -28.2% (10K) → -27.1% (20K) — stable ~27% accelerator.
 Growing advantage is driven by RetNet+layerwise, NOT Engram.
 
+d=256 Shakespeare 10K: Anamnesis 1.15, Transformer 1.84 (-37.5%).
+Cross-model-size validation: d=128 grows -20.8%→-35.8%→-42.4%; d=256 grows -28.4%→-37.5%.
+Advantage grows with training at BOTH model sizes. d=256 10K PPL=1.15 is remarkably low.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
