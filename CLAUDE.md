@@ -96,12 +96,18 @@ RetNet vs TF: +4.3% (5K) → -10.6% (10K) → -20.9% (20K) — RetNet is the sca
 Engram contribution: -24.1% (5K) → -28.2% (10K) → -27.1% (20K) — stable ~27% accelerator.
 Growing advantage is driven by RetNet+layerwise, NOT Engram.
 
-d=256 Shakespeare 10K: Anamnesis 1.15, Transformer 1.84 (-37.5%).
-Cross-model-size validation: d=128 grows -20.8%→-35.8%→-42.4%; d=256 grows -28.4%→-37.5%.
-Advantage grows with training at BOTH model sizes. d=256 10K PPL=1.15 is remarkably low.
+d=256 Shakespeare complete scaling: Anamnesis vs Transformer.
 
-d=256 Shakespeare 20K: PPL=1.08 (training loss=0.109, near-optimal).
-d=256 curve: 2.42 (5K) → 1.15 (10K) → 1.08 (20K). Decelerating as expected near convergence.
+| Steps | Anamnesis | Transformer | Δ |
+|-------|-----------|-------------|---|
+| 5K | 2.42 | 3.38 | -28.4% |
+| 10K | 1.15 | 1.84 | -37.5% |
+| 20K | **1.08** | **1.30** | **-17.0%** |
+
+Cross-model-size scaling pattern: d=128 advantage GROWS monotonically (-20.8%→-35.8%→-42.4%);
+d=256 advantage PEAKS at 10K (-28.4%→-37.5%→-17.0%). Transformer catches up at d=256 20K,
+likely because both models approach the entropy floor (Anamnesis 1.08 ≈ char-level limit).
+Anamnesis converges faster but Transformer has more headroom at larger model sizes.
 
 Scaling law exponents: Anamnesis d=128 b=-0.523, RetNet b=-0.495, Transformer b=-0.294.
 RetNet scales ~1.7x faster per step than Transformer — quantitative explanation for growing advantage.
