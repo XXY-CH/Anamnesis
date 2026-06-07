@@ -106,6 +106,19 @@ d=256 Shakespeare complete scaling: Anamnesis vs Transformer.
 
 d=256 20K decomposition: Bare RetNet PPL=1.114, Engram adds -3.1% (1.08).
 RetNet vs TF at 20K: -14.3% (bare) + -3.1% (Engram) = -17.0% total.
+
+d=256 complete decomposition table (Engram effect by training step):
+
+| Steps | Bare RetNet | Engram effect | Anamnesis |
+|-------|-------------|---------------|-----------|
+| 5K | **1.970** | **+22.8% (HURTS!)** | 2.42 |
+| 10K | ⏳ training | ? | 1.15 |
+| 20K | 1.114 | -3.1% | **1.08** |
+
+**Key finding:** Engram HURTS at d=256 5K (+22.8%), but HELPS at d=256 20K (-3.1%).
+Engram's value flips from negative to positive with training duration at d=256.
+Bare RetNet d=256 5K alone beats Transformer 3.38 by -41.7%.
+
 Cross-model-size scaling pattern: d=128 advantage GROWS monotonically (-20.8%→-35.8%→-42.4%);
 d=256 advantage PEAKS at 10K (-28.4%→-37.5%→-17.0%). Transformer catches up at d=256 20K,
 likely because both models approach the entropy floor (Anamnesis 1.08 ≈ char-level limit).
