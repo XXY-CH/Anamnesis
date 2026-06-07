@@ -103,6 +103,10 @@ Advantage grows with training at BOTH model sizes. d=256 10K PPL=1.15 is remarka
 d=256 Shakespeare 20K: PPL=1.08 (training loss=0.109, near-optimal).
 d=256 curve: 2.42 (5K) → 1.15 (10K) → 1.08 (20K). Decelerating as expected near convergence.
 
+Scaling law exponents: Anamnesis d=128 b=-0.523, RetNet b=-0.495, Transformer b=-0.294.
+RetNet scales ~1.7x faster per step than Transformer — quantitative explanation for growing advantage.
+d=256 Anamnesis b=-0.582 (steepest). Power law analysis confirms RetNet is the scaling driver.
+
 ### Context-Length Crossover
 
 Mamba wins at short context (seq_len=128, PPL=3.77), Anamnesis wins at long context (seq_len=512, PPL=3.12).
