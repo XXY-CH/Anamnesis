@@ -104,10 +104,13 @@ d=256 Shakespeare complete scaling: Anamnesis vs Transformer.
 | 10K | 1.15 | 1.84 | -37.5% |
 | 20K | **1.08** | **1.30** | **-17.0%** |
 
+d=256 20K decomposition: Bare RetNet PPL=1.114, Engram adds -3.1% (1.08).
+RetNet vs TF at 20K: -14.3% (bare) + -3.1% (Engram) = -17.0% total.
 Cross-model-size scaling pattern: d=128 advantage GROWS monotonically (-20.8%→-35.8%→-42.4%);
 d=256 advantage PEAKS at 10K (-28.4%→-37.5%→-17.0%). Transformer catches up at d=256 20K,
 likely because both models approach the entropy floor (Anamnesis 1.08 ≈ char-level limit).
 Anamnesis converges faster but Transformer has more headroom at larger model sizes.
+d=256 20K decomposition CONFIRMS: advantage narrowing is RetNet-level (not Engram).
 
 Scaling law exponents: Anamnesis d=128 b=-0.523, RetNet b=-0.495, Transformer b=-0.294.
 RetNet scales ~1.7x faster per step than Transformer — quantitative explanation for growing advantage.
