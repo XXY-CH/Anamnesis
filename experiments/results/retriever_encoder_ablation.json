@@ -1,0 +1,103 @@
+[
+  {
+    "variant": "bare_retnet",
+    "engram_layers": [],
+    "params": 425859,
+    "diag_acc": 0.0625,
+    "diag_top3": 0.6562,
+    "results": [
+      {
+        "context_length": 2048,
+        "n_chunks": 4,
+        "em": 0.0
+      },
+      {
+        "context_length": 4096,
+        "n_chunks": 8,
+        "em": 0.0
+      },
+      {
+        "context_length": 8192,
+        "n_chunks": 16,
+        "em": 0.0
+      },
+      {
+        "context_length": 16384,
+        "n_chunks": 32,
+        "em": 0.0
+      },
+      {
+        "context_length": 32768,
+        "n_chunks": 64,
+        "em": 0.0
+      },
+      {
+        "context_length": 65536,
+        "n_chunks": 128,
+        "em": 0.0
+      },
+      {
+        "context_length": 131072,
+        "n_chunks": 256,
+        "em": 0.0
+      },
+      {
+        "context_length": 262144,
+        "n_chunks": 512,
+        "em": 0.0
+      }
+    ]
+  },
+  {
+    "variant": "anamnesis",
+    "engram_layers": [
+      2,
+      5
+    ],
+    "params": 6734599,
+    "diag_acc": 0.0312,
+    "diag_top3": 0.0312,
+    "results": [
+      {
+        "context_length": 2048,
+        "n_chunks": 4,
+        "em": 0.0
+      },
+      {
+        "context_length": 4096,
+        "n_chunks": 8,
+        "em": 0.0
+      },
+      {
+        "context_length": 8192,
+        "n_chunks": 16,
+        "em": 0.0
+      },
+      {
+        "context_length": 16384,
+        "n_chunks": 32,
+        "em": 0.0
+      },
+      {
+        "context_length": 32768,
+        "n_chunks": 64,
+        "em": 0.0
+      },
+      {
+        "context_length": 65536,
+        "n_chunks": 128,
+        "em": 0.0
+      },
+      {
+        "context_length": 131072,
+        "n_chunks": 256,
+        "em": 0.0
+      },
+      {
+        "context_length": 262144,
+        "n_chunks": 512,
+        "em": 0.0
+      }
+    ]
+  }
+]
