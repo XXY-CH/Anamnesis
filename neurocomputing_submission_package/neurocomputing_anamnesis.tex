@@ -612,6 +612,15 @@ TinyStories (repetitive) & 2.38 & \textbf{2.07} & +14.9\% \\
 
 The advantage is \textbf{proportional to data diversity}. On diverse data (Shakespeare), it grows monotonically. On repetitive data (TinyStories), Transformer catches up and reverses the advantage at 10K steps. This suggests gated memory is most valuable in compute-limited settings on diverse corpora where Transformer undertraining is most severe.
 
+Figure~\ref{fig:training-curves-real} plots the actual validation PPL trajectories (logged every 500 steps from real training logs) for the 20K-step Shakespeare runs. At $d=128$, Anamnesis converges below both Bare RetNet and Transformer throughout training, and the gap widens monotonically. At $d=256$, Anamnesis converges faster and reaches a lower asymptote (1.08 vs.\ 1.30), though the gap narrows as both models approach the character-level entropy floor.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\linewidth]{figures/fig_training_curves_real.pdf}
+\caption{Validation perplexity trajectories from real training logs (Shakespeare char-level, lr=$10^{-3}$, seed=42, 20K steps). \textbf{(a)} $d=128$: Anamnesis (blue) maintains a growing advantage over Bare RetNet (green) and Transformer (red). \textbf{(b)} $d=256$: Anamnesis converges faster and reaches a lower asymptote. Validation PPL logged every 500 steps.}
+\label{fig:training-curves-real}
+\end{figure}
+
 \subsection{Structural Ablation Studies}
 
 To verify the individual contributions of our core architectural refactorings, we conduct a series of ablation experiments at width $d = 128$. Table~\ref{tab:ablations} details the validation perplexity impact of each component.
