@@ -610,7 +610,14 @@ TinyStories (repetitive) & 2.38 & \textbf{2.07} & +14.9\% \\
 \end{tabular}
 \end{table}
 
-The advantage is \textbf{proportional to data diversity}. On diverse data (Shakespeare), it grows monotonically. On repetitive data (TinyStories), Transformer catches up and reverses the advantage at 10K steps. This suggests gated memory is most valuable in compute-limited settings on diverse corpora where Transformer undertraining is most severe.
+The advantage is \textbf{proportional to data diversity}. On diverse data (Shakespeare), it grows monotonically. On repetitive data (TinyStories), Transformer catches up and reverses the advantage at 10K steps. This suggests gated memory is most valuable in compute-limited settings on diverse corpora where Transformer undertraining is most severe. Figure~\ref{fig:cross-dataset-real} visualizes this relationship: the perplexity delta shifts from $-$35.8\% (Anamnesis wins) on diverse data to $+$14.9\% (Transformer wins) on repetitive data, with WikiText-2 as the near-zero crossover point.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/fig_cross_dataset_real.pdf}
+\caption{Cross-dataset validation from real training logs (char-level, $d=128$, lr=$10^{-3}$, seed=42, 10K steps). \textbf{(a)} Absolute validation PPL per dataset. \textbf{(b)} Relative advantage $\Delta$ vs Transformer: the benefit monotonically decreases with data repetitiveness, crossing zero near WikiText-2 and reversing on TinyStories.}
+\label{fig:cross-dataset-real}
+\end{figure}
 
 \subsubsection{Scaling law analysis}
 
