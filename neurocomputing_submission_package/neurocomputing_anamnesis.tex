@@ -632,6 +632,17 @@ Figure~\ref{fig:training-curves-real} plots the actual validation PPL trajectori
 \label{fig:training-curves-real}
 \end{figure}
 
+\subsubsection{Multi-seed statistical validation}
+
+To quantify run-to-run variance, Figure~\ref{fig:multiseed-real} reports mean $\pm$ standard deviation over multiple random seeds at the 5K-step checkpoint. At $d=128$, Anamnesis ($3.13 \pm 0.12$, $n=3$) clearly outperforms Transformer ($3.94 \pm 0.08$, $n=3$) with non-overlapping error bars. At $d=256$, Bare RetNet ($1.97$, $n=1$) outperforms Anamnesis ($2.42 \pm 0.03$, $n=3$), confirming the Engram time-dependency finding: the scalar gate has not yet converged at 5K steps and hash-collision noise dominates at larger widths. This inverts at 20K steps where Anamnesis ($1.08$) surpasses Bare RetNet ($1.11$), as shown in Section~\ref{sec:extended-scaling}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/fig_multiseed_real.pdf}
+\caption{Multi-seed validation perplexity (Shakespeare char-level, lr=$10^{-3}$, 5K steps). Error bars show standard deviation; black dots are individual seeds. \textbf{(a)} $d=128$: Anamnesis wins with non-overlapping error bars. \textbf{(b)} $d=256$: Bare RetNet wins at 5K (Engram gate not yet converged), but this reverses at 20K steps.}
+\label{fig:multiseed-real}
+\end{figure}
+
 \subsection{Structural Ablation Studies}
 
 To verify the individual contributions of our core architectural refactorings, we conduct a series of ablation experiments at width $d = 128$. Table~\ref{tab:ablations} details the validation perplexity impact of each component.
