@@ -612,7 +612,18 @@ TinyStories (repetitive) & 2.38 & \textbf{2.07} & +14.9\% \\
 
 The advantage is \textbf{proportional to data diversity}. On diverse data (Shakespeare), it grows monotonically. On repetitive data (TinyStories), Transformer catches up and reverses the advantage at 10K steps. This suggests gated memory is most valuable in compute-limited settings on diverse corpora where Transformer undertraining is most severe.
 
+\subsubsection{Scaling law analysis}
+
+Fitting a power law $\mathrm{PPL} \propto S^{b}$ to the 5K/10K/20K endpoints (Figure~\ref{fig:scaling-law-real}) yields exponents $b_{\mathrm{Anamnesis}} = -0.50$, $b_{\mathrm{RetNet}} = -0.49$, and $b_{\mathrm{Transformer}} = -0.30$. The RetNet-based architectures scale approximately $1.6\times$ steeper than the Transformer, providing a quantitative explanation for the growing advantage: each doubling of training budget yields a larger relative perplexity reduction for RetNet-family models than for the Transformer baseline.
+
 Figure~\ref{fig:training-curves-real} plots the actual validation PPL trajectories (logged every 500 steps from real training logs) for the 20K-step Shakespeare runs. At $d=128$, Anamnesis converges below both Bare RetNet and Transformer throughout training, and the gap widens monotonically. At $d=256$, Anamnesis converges faster and reaches a lower asymptote (1.08 vs.\ 1.30), though the gap narrows as both models approach the character-level entropy floor.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/fig_scaling_law_real.pdf}
+\caption{Power-law scaling fit from real training endpoints (Shakespeare char-level, $d=128$, lr=$10^{-3}$, seed=42). RetNet-based models ($b \approx -0.49$ to $-0.50$) scale $\sim$1.6$\times$ steeper than the Transformer ($b = -0.30$), explaining the growing perplexity advantage with training duration. Data points are final validation PPL from each run.}
+\label{fig:scaling-law-real}
+\end{figure}
 
 \begin{figure}[htbp]
 \centering
